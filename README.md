@@ -159,11 +159,11 @@ It prints the two organization UUIDs for the walkthrough.
 
 Sign in as the Org A owner, create a workflow, and click **Load reviewer demo**. It creates:
 
-1. Gemini `llm_call` returning structured sentiment JSON.
-2. `conditional_branch` routing positive output to the HTTP step and negative output directly to persistence.
-3. Real `http_request` to `https://httpbin.org/post`.
-4. `approval_gate` that pauses the run.
-5. Owner-only `db_write` into `workflow_results`.
+1. Gemini `llm_call` using `gemini-3.5-flash-lite` and returning `POSITIVE` or `NEGATIVE` text.
+2. `conditional_branch` routing positive output to the HTTP step and negative output directly to the approval gate.
+3. Real `http_request` to `https://httpbin.org/post` on the positive path.
+4. `approval_gate` that pauses either branch before persistence.
+5. Owner-only `db_write` into `workflow_results` after approval.
 
 Enable Manual and Webhook triggers and save. The browser deliberately hides/disables restricted controls for lower roles, while the server Action remains the actual enforcement boundary.
 
@@ -180,11 +180,11 @@ curl "$NHOST_GRAPHQL_URL" \
   -H 'content-type: application/json' \
   --data '{
     "query":"mutation($id:uuid!,$secret:String!,$payload:json){ webhookTrigger(workflow_id:$id,secret:$secret,payload:$payload){ run_id status } }",
-    "variables":{"id":"WORKFLOW_UUID","secret":"YOUR_WEBHOOK_SECRET","payload":{"source":"curl"}}
+    "variables":{"id":"WORKFLOW_UUID","secret":"YOUR_WEBHOOK_SECRET","payload":{"text":"The launch was a disaster and customers are disappointed."}}
   }'
 ```
 
-Secrets are hashed before storage and are not exposed in the workflow-trigger select permission.
+The negative payload is useful in the demo because Gemini returns `NEGATIVE`, the branch targets the approval gate, and the HTTP node is visibly marked `skipped`. Secrets are hashed before storage and are not exposed in the workflow-trigger select permission.
 
 ## Scheduled and database-event starts
 
