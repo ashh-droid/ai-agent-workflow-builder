@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Install function dependencies
+        run: npm install --prefix functions
+      - name: Typecheck frontend
+        run: npm run typecheck
+      - name: Typecheck functions
+        run: npx tsc -p functions/tsconfig.json --noEmit
+      - name: Build Next.js app
+        run: npm run build
