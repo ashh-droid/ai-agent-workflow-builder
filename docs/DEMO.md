@@ -1,58 +1,100 @@
 # Final Task Recording Script
 
-Target: a focused ~6 minute recording that proves the exact acceptance scenario.
+Target: a focused ~6 minute recording that proves the exact acceptance scenario with the hosted Vercel app and Frankfurt Nhost backend.
 
 ## Before recording
 
-- Hosted Nhost project and Next.js app are healthy.
+- Confirm the Vercel production deployment is **Ready** and hard-refresh once.
+- Sign in as the Northstar AI owner and remove disposable failed test workflows with the owner-only **Delete** action. Keep the final reviewer workflow.
+- Resolve any old paused test run if you want a completely clean quota card.
 - `GEMINI_API_KEY` exists only in the backend environment.
 - **Northstar AI (Org A):** owner + editor.
 - **Orbit Labs (Org B):** owner + viewer.
-- Have credentials for an Org A owner and an Org B user.
+- Have credentials for the Org A owner and Org B viewer.
 - Keep the Org A workflow UUID available for the known-ID attack test.
+- Never show passwords, access tokens, admin secrets, or webhook secrets in the recording.
 
-## 0:00–0:45 — Two organizations and roles
+## 0:00–0:45 — Product, organizations, and roles
 
-Sign in as the Northstar AI owner. Show the organization selector, owner badge, and quota indicator. State that owner/editor/viewer are per-organization memberships rather than global JWT roles.
+Open the live Vercel URL and sign in as the Northstar AI owner. Show:
 
-## 0:45–2:00 — Build the required workflow
+- organization selector → **Northstar AI · owner**;
+- monthly quota and the tracked monthly-run aggregation;
+- owner role badge;
+- clean workflow sidebar.
 
-Create a workflow and click **Load reviewer demo**. Show:
+State that owner/editor/viewer are per-organization memberships in `org_members`, not global JWT roles.
 
-1. `llm_call` — Gemini sentiment analysis.
-2. `conditional_branch` — positive goes to step 3; negative goes to step 5.
-3. `http_request` — POST the positive analysis to an external HTTP endpoint.
-4. `approval_gate` — human review.
-5. `db_write` — persist the approved result.
+## 0:45–1:45 — Build the required workflow
 
-Enable **Manual** and **Webhook** triggers. Enter a strong webhook secret and save. Point out that DB-write and webhook controls are marked owner-only.
+Create a workflow and click **Load reviewer demo**. Briefly show the color-coded nodes:
 
-## 2:00–3:20 — Manual run, subscription, pause, approval
+1. `llm_call` — Gemini sentiment classification using `gemini-3.5-flash-lite`.
+2. `conditional_branch` — `POSITIVE` goes to step 3; `NEGATIVE` goes directly to step 4.
+3. `http_request` — external HTTP call on the positive branch.
+4. `approval_gate` — human review before persistence.
+5. `db_write` — owner-only persisted result.
 
-Click **Run**. The Action returns a run ID immediately and the Live Execution panel subscribes to `step_runs`. Without refreshing, show the LLM, branch, and HTTP transitions, then the approval node becomes `waiting_approval` and the UI reads **Paused · awaiting approval**.
+Enable **Manual** and **Webhook** triggers and save. Point out that DB write and webhook configuration are owner-only. The server Action is the enforcement boundary; the UI restrictions are convenience only.
 
-Click **Approve & resume**. The same run resumes, DB write completes, and the pipeline reaches Completed. Expand a step to show input/output and `attempt_count`.
+## 1:45–3:05 — Positive manual run, live subscription, pause, approval
 
-## 3:20–4:10 — Start the same workflow without the Run button
+Click **Run**. Do not refresh the page.
 
-Use Hasura GraphQL/curl with the public webhook Action:
+The Action returns a run ID immediately and the right-side panel subscribes to `step_runs`. Show the live transition:
+
+```text
+Gemini             completed → POSITIVE
+Conditional branch completed → target step 3
+HTTP request        completed
+Approval gate       waiting_approval
+DB write            pending
+```
+
+Show **Paused · awaiting approval**. Expand one step so the reviewer can see real input/output and `attempt_count`.
+
+Click **Approve & resume**. The same run resumes, DB write completes, the pipeline reaches **Completed**, and the workspace quota/run summary refreshes.
+
+## 3:05–3:55 — Negative webhook run proves a different branch
+
+Trigger the same workflow through the public `webhookTrigger` Action using a negative payload. The webhook secret is required but must not be shown in the recording.
+
+Example shape:
 
 ```bash
 curl "$NHOST_GRAPHQL_URL" \
   -H 'content-type: application/json' \
   --data '{
     "query":"mutation($id:uuid!,$secret:String!,$payload:json){ webhookTrigger(workflow_id:$id,secret:$secret,payload:$payload){ run_id status } }",
-    "variables":{"id":"ORG_A_WORKFLOW_ID","secret":"DEMO_SECRET","payload":{"source":"recording"}}
+    "variables":{"id":"ORG_A_WORKFLOW_ID","secret":"REDACTED","payload":{"text":"The launch was a disaster and customers are extremely disappointed."}}
   }'
 ```
 
-Show the returned run ID/new run. Optionally also configure `db_event` for `demo.created`, click **Emit DB event**, and show a run started through the Hasura Event Trigger.
+Show the resulting run in the app or API output:
 
-## 4:10–5:30 — Known-ID cross-organization attack
+```text
+trigger_type         webhook
+Gemini               NEGATIVE
+conditional branch   _branch_target = 4
+HTTP request         skipped
+approval gate        waiting_approval
+```
 
-Copy the Org A workflow ID and, if possible, an Org A waiting approval step-run ID. Sign out and sign in as the Orbit Labs user.
+This is the key proof that the conditional branch changes actual execution behavior based on LLM output.
 
-First show the normal UI: Northstar data is absent. Then send this query with the **Org B user's bearer token** and the known Org A UUID:
+## 3:55–5:10 — Viewer UI + known-ID cross-organization attack
+
+Sign out and sign in as `viewer-b@example.com`.
+
+First show the normal UI:
+
+- only **Orbit Labs** is visible;
+- Northstar workflows are absent;
+- Run, Save, workflow creation, and restricted mutation controls are not available to the viewer.
+
+Then use the Org B viewer JWT in a prepared terminal/API client while keeping the token hidden. Supply the exact known Org A IDs.
+
+Known workflow read:
 
 ```graphql
 query GuessOrgAWorkflow($id: uuid!) {
@@ -62,7 +104,7 @@ query GuessOrgAWorkflow($id: uuid!) {
 
 Expected: `workflows_by_pk: null`.
 
-Try to trigger that known workflow:
+Known workflow trigger:
 
 ```graphql
 mutation GuessTrigger($id: uuid!) {
@@ -73,9 +115,9 @@ mutation GuessTrigger($id: uuid!) {
 }
 ```
 
-Expected: authorization error and no run.
+Expected: `Not found or not authorized` and no run.
 
-If an Org A run is paused, try:
+If an Org A approval step is paused, try:
 
 ```graphql
 mutation GuessApproval($id: uuid!) {
@@ -83,8 +125,19 @@ mutation GuessApproval($id: uuid!) {
 }
 ```
 
-Expected: authorization error and the Org A step remains waiting. The repository's `npm run security:smoke` automates the same checks.
+Expected: `Not found or not authorized`. The repository's `npm run security:smoke` automates the same checks.
 
-## 5:30–6:00 — Close with quota/source proof
+## 5:10–6:00 — Retry, aggregation, and source-of-truth proof
 
-Return to Org A and show quota usage after a completed run. Briefly show `nhost/migrations`, `nhost/metadata`, and `functions` in the repo so the reviewer can see the live behavior is backed by version-controlled schema, permissions, Actions, and triggers.
+Return to the Org A owner. Show the monthly usage card and explain that it is backed by the tracked `org_monthly_usage` PostgreSQL view, which includes monthly run totals, success/failure counts, remaining/reserved quota, and average run duration.
+
+Briefly show these repository locations:
+
+- `functions/_lib/runner.ts` — LLM/HTTP retry handling and execution semantics;
+- `nhost/migrations/default/.../up.sql` — schema, quota settlement, and `org_monthly_usage` view;
+- `nhost/metadata/` — Hasura relationships, permissions, Actions, Event/Cron triggers;
+- `scripts/security-smoke.mjs` — known-ID cross-org security checks.
+
+If you want direct retry evidence, show a preserved development run or test output where an LLM/HTTP step reached `attempt_count: 2`; do not keep failed test workflows visible in the product sidebar solely for this purpose.
+
+Close on the live Vercel URL and GitHub repository.
