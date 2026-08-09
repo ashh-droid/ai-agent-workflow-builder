@@ -23,8 +23,8 @@ The project is being built against the assignment's end-to-end acceptance scenar
 - [x] Quota reservation/settlement and monthly reset
 - [x] Org usage aggregation view
 - [x] Cross-org smoke-test script
-- [ ] Cloud Nhost project configured from repository
+- [ ] Cloud Nhost deployment validated end-to-end (project connected; first deployment triggered)
 - [ ] Hosted Next.js URL created
 - [ ] Final live walkthrough recorded
 
-The final three items require the user's cloud accounts and are documented in the README/deployment guide; no credentials are committed to the repository.
+The remaining items require cloud integration validation and deployment. No credentials are committed to the repository.
