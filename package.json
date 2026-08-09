@@ -1,0 +1,34 @@
+{
+  "name": "ai-agent-workflow-builder",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run typecheck:functions && npm run build",
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "security:smoke": "node scripts/security-smoke.mjs",
+    "typecheck:functions": "tsc -p functions/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nhost/nhost-js": "^4.8.0",
+    "graphql": "^16.11.0",
+    "graphql-ws": "^6.0.6",
+    "lucide-react": "^0.468.0",
+    "next": "^16.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "urql": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.2"
+  }
+}
