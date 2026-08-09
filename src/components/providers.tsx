@@ -18,13 +18,21 @@ export function Providers({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(null);
   const [isLoading, setLoading] = useState(true);
   useEffect(() => { setSession(nhost.getUserSession()); setLoading(false); return nhost.sessionStorage.onChange((next) => setSession(next)); }, [nhost]);
-  const wsClient = useMemo<WsClient>(() => createWsClient({ url: graphqlUrl().replace(/^http/, "ws"), connectionParams: () => session?.accessToken ? { headers: { Authorization: `Bearer ${session.accessToken}` } } : {} }), [session?.accessToken]);
+  const accessToken = session?.accessToken;
+  const wsClient = useMemo<WsClient>(() => createWsClient({ url: graphqlUrl().replace(/^http/, "ws"), connectionParams: () => accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {} }), [accessToken]);
   useEffect(() => () => { void wsClient.dispose(); }, [wsClient]);
   const urql = useMemo(() => createUrqlClient({
     url: graphqlUrl(),
-    fetchOptions: () => ({ headers: session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {} }),
-    exchanges: [cacheExchange, fetchExchange, subscriptionExchange({ forwardSubscription(request) { const input = { ...request, query: print(request.query) }; return { subscribe(sink) { const unsubscribe = wsClient.subscribe(input, sink); return { unsubscribe }; } }; } })],
-  }), [session?.accessToken, wsClient]);
+    fetchOptions: (): RequestInit => accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {},
+    exchanges: [cacheExchange, fetchExchange, subscriptionExchange({
+      forwardSubscription(request) {
+        if (!request.query) throw new Error("Subscription query is required");
+        const query = typeof request.query === "string" ? request.query : print(request.query as any);
+        const input = { ...request, query };
+        return { subscribe(sink) { const unsubscribe = wsClient.subscribe(input, sink); return { unsubscribe }; } };
+      },
+    })],
+  }), [accessToken, wsClient]);
   return <AuthContext.Provider value={{ nhost, session, isLoading }}><UrqlProvider value={urql}>{children}</UrqlProvider></AuthContext.Provider>;
 }
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error("useAuth must be used inside Providers"); return value; }
