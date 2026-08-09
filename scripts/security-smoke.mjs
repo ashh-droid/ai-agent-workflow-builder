@@ -1,0 +1,6 @@
+const url=process.env.NHOST_GRAPHQL_URL,token=process.env.ORG_B_ACCESS_TOKEN,workflowId=process.env.ORG_A_WORKFLOW_ID,stepRunId=process.env.ORG_A_STEP_RUN_ID;if(!url||!token||!workflowId)throw new Error("Set NHOST_GRAPHQL_URL, ORG_B_ACCESS_TOKEN, and ORG_A_WORKFLOW_ID");
+async function request(query,variables={}){const response=await fetch(url,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify({query,variables})});return response.json();}
+const read=await request(`query Guess($id:uuid!){workflows_by_pk(id:$id){id name org_id}}`,{id:workflowId});if(read.data?.workflows_by_pk!==null)throw new Error("FAIL: Org B could read Org A workflow");
+const trigger=await request(`mutation GuessRun($id:uuid!){triggerWorkflowRun(workflow_id:$id,input:{}){run_id}}`,{id:workflowId});if(!trigger.errors?.length)throw new Error("FAIL: Org B could trigger Org A workflow");
+if(stepRunId){const approve=await request(`mutation GuessApproval($id:uuid!){approveStep(step_run_id:$id){run_id status}}`,{id:stepRunId});if(!approve.errors?.length)throw new Error("FAIL: Org B could approve Org A step");}
+console.log("PASS: cross-org read, trigger, and approval attempts are blocked.");
