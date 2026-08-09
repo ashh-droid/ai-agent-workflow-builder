@@ -25,10 +25,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
       - name: Install function dependencies
-        run: npm install --prefix functions
+        run: npm ci --prefix functions
       - name: Install Nhost CLI
         run: curl -L https://raw.githubusercontent.com/nhost/nhost/main/cli/get.sh | sudo bash
       - name: Validate Nhost configuration
