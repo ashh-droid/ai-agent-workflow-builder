@@ -29,7 +29,20 @@ jobs:
         run: npm install
       - name: Install function dependencies
         run: npm install --prefix functions
-      - name: Validate Nhost config and Action SDL
+      - name: Install Nhost CLI
+        run: curl -L https://raw.githubusercontent.com/nhost/nhost/main/cli/get.sh | sudo bash
+      - name: Validate Nhost configuration
+        run: |
+          cat > .secrets <<'EOF'
+          HASURA_GRAPHQL_ADMIN_SECRET = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+          HASURA_GRAPHQL_JWT_SECRET = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'
+          NHOST_WEBHOOK_SECRET = 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
+          GEMINI_API_KEY = 'ci-placeholder-gemini-key'
+          GRAFANA_ADMIN_PASSWORD = 'ci-placeholder-grafana-password'
+          EOF
+          nhost config validate
+          rm .secrets
+      - name: Validate Action SDL
         run: |
           python3 -c "import tomllib; tomllib.load(open('nhost/nhost.toml','rb'))"
           node -e "const fs=require('fs'); const {parse}=require('graphql'); parse(fs.readFileSync('nhost/metadata/actions.graphql','utf8'));"
