@@ -1,0 +1,48 @@
+table:
+  name: workflow_runs
+  schema: public
+object_relationships:
+  - name: organization
+    using: {foreign_key_constraint_on: org_id}
+  - name: workflow
+    using:
+      manual_configuration:
+        column_mapping: {workflow_id: id, org_id: org_id}
+        insertion_order: null
+        remote_table: {name: workflows, schema: public}
+array_relationships:
+  - name: step_runs
+    using:
+      manual_configuration:
+        column_mapping: {id: workflow_run_id, org_id: org_id}
+        insertion_order: null
+        remote_table: {name: step_runs, schema: public}
+select_permissions:
+  - role: user
+    permission:
+      columns: [id,workflow_id,org_id,status,trigger_type,triggered_by,trigger_payload,next_step_order,quota_reserved,started_at,completed_at,created_at,updated_at]
+      filter:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
+event_triggers:
+  - name: workflow_run_created
+    definition:
+      enable_manual: false
+      insert:
+        columns: '*'
+    retry_conf:
+      interval_sec: 5
+      num_retries: 2
+      timeout_sec: 60
+    webhook: '{{NHOST_FUNCTIONS_URL}}/events/run-created'
+    headers:
+      - name: nhost-webhook-secret
+        value_from_env: NHOST_WEBHOOK_SECRET
+    cleanup_config:
+      batch_size: 10000
+      clean_invocation_logs: true
+      clear_older_than: 168
+      paused: false
+      schedule: 0 0 * * *
+      timeout: 60
