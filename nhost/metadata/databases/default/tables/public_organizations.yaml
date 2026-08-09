@@ -18,11 +18,10 @@ array_relationships:
           schema: public
   - name: runs
     using:
-      foreign_key_constraint_on:
-        column: org_id
-        table:
-          name: workflow_runs
-          schema: public
+      manual_configuration:
+        column_mapping: {id: org_id}
+        insertion_order: null
+        remote_table: {name: workflow_runs, schema: public}
 select_permissions:
   - role: user
     permission:
