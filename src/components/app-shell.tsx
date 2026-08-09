@@ -249,7 +249,11 @@ export function AppShell() {
         <div className="content-grid">
           {orgId && <WorkflowBuilder orgId={orgId} role={role} workflow={selected} onSave={save} />}
           {runId ? (
-            <RunViewer runId={runId} role={role} />
+            <RunViewer
+              runId={runId}
+              role={role}
+              onRunSettled={() => refresh({ requestPolicy: "network-only" })}
+            />
           ) : (
             <section className="run-panel empty-run">
               <Radio size={24} />
