@@ -80,7 +80,7 @@ function contextFor(run: RunRecord, previous: unknown): TemplateContext {
 async function executeGemini(config: Record<string, unknown>, context: TemplateContext): Promise<unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
-  const model = typeof config.model === "string" ? config.model : "gemini-2.5-flash";
+  const model = typeof config.model === "string" ? config.model : "gemini-3.5-flash";
   if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new Error("Invalid Gemini model name");
   const prompt = renderTemplate(typeof config.prompt_template === "string" ? config.prompt_template : "{{prev_output}}", context);
   const jsonMode = config.json_mode !== false;
@@ -90,8 +90,8 @@ async function executeGemini(config: Record<string, unknown>, context: TemplateC
   };
   if (jsonMode) generationConfig.responseMimeType = "application/json";
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig }), signal: AbortSignal.timeout(15_000) },
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig }), signal: AbortSignal.timeout(15_000) },
   );
   const body = (await response.json()) as Record<string, any>;
   if (!response.ok) throw new Error(`Gemini ${response.status}: ${body?.error?.message ?? "request failed"}`);
