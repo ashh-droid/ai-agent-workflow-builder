@@ -1,0 +1,41 @@
+table:
+  name: workflows
+  schema: public
+object_relationships:
+  - name: organization
+    using: {foreign_key_constraint_on: org_id}
+array_relationships:
+  - name: steps
+    using:
+      manual_configuration:
+        column_mapping: {id: workflow_id, org_id: org_id}
+        insertion_order: null
+        remote_table: {name: workflow_steps, schema: public}
+  - name: triggers
+    using:
+      manual_configuration:
+        column_mapping: {id: workflow_id, org_id: org_id}
+        insertion_order: null
+        remote_table: {name: workflow_triggers, schema: public}
+  - name: runs
+    using:
+      manual_configuration:
+        column_mapping: {id: workflow_id, org_id: org_id}
+        insertion_order: null
+        remote_table: {name: workflow_runs, schema: public}
+select_permissions:
+  - role: user
+    permission:
+      columns: [id,org_id,name,description,is_active,created_by,created_at,updated_at]
+      filter:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
+            role: {_eq: owner}
