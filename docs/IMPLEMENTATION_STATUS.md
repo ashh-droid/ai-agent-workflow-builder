@@ -23,7 +23,9 @@ The project is being built against the assignment's end-to-end acceptance scenar
 - [x] Quota reservation/settlement and monthly reset
 - [x] Org usage aggregation view
 - [x] Cross-org smoke-test script
-- [ ] Cloud Nhost deployment validated end-to-end (project connected; first deployment triggered)
+- [x] Nhost cloud project connected to `main`
+- [x] Nhost configuration validated with the official CLI
+- [ ] Cloud Nhost deployment validated end-to-end (retry triggered after config-schema fix)
 - [ ] Hosted Next.js URL created
 - [ ] Final live walkthrough recorded
 
