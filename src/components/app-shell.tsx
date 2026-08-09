@@ -1,14 +1,20 @@
 "use client";
 
-import { DatabaseZap, LogOut, Play, Plus, Radio, Shield, Workflow as WorkflowIcon } from "lucide-react";
+import { DatabaseZap, LogOut, Play, Plus, Radio, Shield, Trash2, Workflow as WorkflowIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "urql";
-import { INSERT_TRIGGER_EVENT, MY_ORGS, ORG_WORKSPACE, SAVE_WORKFLOW, TRIGGER_RUN } from "@/lib/graphql";
+import { DELETE_WORKFLOW, INSERT_TRIGGER_EVENT, MY_ORGS, ORG_WORKSPACE, SAVE_WORKFLOW, TRIGGER_RUN } from "@/lib/graphql";
 import type { Membership, OrgRole, Workflow } from "@/lib/types";
 import { useAuth } from "./providers";
 import { RunViewer } from "./run-viewer";
 import { WorkflowBuilder } from "./workflow-builder";
+
+function statusLabel(status?: string) {
+  if (!status) return "never run";
+  if (status === "waiting_approval") return "awaiting approval";
+  return status.replaceAll("_", " ");
+}
 
 export function AppShell() {
   const { nhost, session, isLoading } = useAuth();
@@ -60,6 +66,7 @@ export function AppShell() {
   const usage = workspace?.org_monthly_usage?.[0];
 
   const [, saveMutation] = useMutation(SAVE_WORKFLOW);
+  const [, deleteMutation] = useMutation(DELETE_WORKFLOW);
   const [{ fetching: starting }, startRun] = useMutation(TRIGGER_RUN);
   const [, emitEvent] = useMutation(INSERT_TRIGGER_EVENT);
 
@@ -71,12 +78,27 @@ export function AppShell() {
     refresh({ requestPolicy: "network-only" });
   }
 
+  async function deleteWorkflow() {
+    if (!selected?.id || role !== "owner") return;
+    const confirmed = window.confirm(`Delete “${selected.name}” and its run history? This cannot be undone.`);
+    if (!confirmed) return;
+    const result = await deleteMutation({ workflowId: selected.id });
+    if (result.error) {
+      setNotice(result.error.message);
+      return;
+    }
+    setRunId(null);
+    setWorkflowId(null);
+    setNotice(`Deleted ${selected.name}.`);
+    refresh({ requestPolicy: "network-only" });
+  }
+
   async function run() {
     if (!selected?.id || role === "viewer") return;
     setNotice(null);
     const result = await startRun({
       workflowId: selected.id,
-      input: { text: "The product launch exceeded all expectations" },
+      input: { text: "The product launch exceeded all expectations and customers are delighted." },
     });
     if (result.error) {
       setNotice(result.error.message);
@@ -172,7 +194,7 @@ export function AppShell() {
 
         <div className="quota-card">
           <div className="quota-head">
-            <span>Monthly usage</span>
+            <span>Monthly quota</span>
             <strong>
               {usage?.quota_used ?? membership?.organization.quota_used ?? 0} / {usage?.quota_limit ?? membership?.organization.quota_limit ?? 0}
             </strong>
@@ -185,6 +207,10 @@ export function AppShell() {
             />
           </div>
           <small>{usage?.quota_reserved ?? 0} reserved · {usage?.quota_remaining ?? 0} available</small>
+          <div className="quota-stats">
+            <span><strong>{usage?.total_runs_this_month ?? 0}</strong> runs</span>
+            <span><strong>{usage?.successful_runs ?? 0}</strong> completed</span>
+          </div>
         </div>
 
         <div className="sidebar-title">
@@ -192,6 +218,7 @@ export function AppShell() {
           {role !== "viewer" && (
             <button
               className="icon-btn"
+              aria-label="Create workflow"
               onClick={() => {
                 setWorkflowId("new");
                 setRunId(null);
@@ -203,27 +230,32 @@ export function AppShell() {
         </div>
 
         <nav className="workflow-nav">
-          {workflows.map((wf) => (
-            <button
-              key={wf.id}
-              className={workflowId === wf.id ? "active" : ""}
-              onClick={() => {
-                setWorkflowId(wf.id!);
-                setRunId(null);
-              }}
-            >
-              <WorkflowIcon size={15} />
-              <span>
-                <strong>{wf.name}</strong>
-                <small>{wf.runs?.[0]?.status ?? "never run"}</small>
-              </span>
-            </button>
-          ))}
+          {workflows.map((wf) => {
+            const latestStatus = wf.runs?.[0]?.status;
+            return (
+              <button
+                key={wf.id}
+                className={workflowId === wf.id ? "active" : ""}
+                onClick={() => {
+                  setWorkflowId(wf.id!);
+                  setRunId(null);
+                }}
+              >
+                <WorkflowIcon size={15} />
+                <span>
+                  <strong>{wf.name}</strong>
+                  <small className={`workflow-status workflow-status-${latestStatus ?? "never"}`}>
+                    {statusLabel(latestStatus)}
+                  </small>
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
           <span>{signedInEmail}</span>
-          <button onClick={signOut} className="icon-btn"><LogOut size={15} /></button>
+          <button onClick={signOut} className="icon-btn" aria-label="Sign out"><LogOut size={15} /></button>
         </div>
       </aside>
 
@@ -232,9 +264,13 @@ export function AppShell() {
           <div>
             <p className="eyebrow">{membership?.organization.name}</p>
             <h1>{selected?.name ?? (workflowId === "new" ? "Create workflow" : "Workflow workspace")}</h1>
+            {selected?.description && <p className="topbar-description">{selected.description}</p>}
           </div>
-          <div className="row gap-sm">
+          <div className="row gap-sm topbar-actions">
             <span className={`role-badge role-${role}`}><Shield size={13} />{role}</span>
+            {selected && role === "owner" && (
+              <button className="secondary danger-button" onClick={() => void deleteWorkflow()}><Trash2 size={15} />Delete</button>
+            )}
             {selected && role !== "viewer" && (
               <button className="secondary" onClick={databaseEvent}><DatabaseZap size={15} />Emit DB event</button>
             )}
@@ -255,12 +291,35 @@ export function AppShell() {
               onRunSettled={() => refresh({ requestPolicy: "network-only" })}
             />
           ) : (
-            <section className="run-panel empty-run">
-              <Radio size={24} />
-              <h2>Live run stream</h2>
-              <p>
-                Start a workflow to attach a GraphQL subscription to <code>step_runs</code>. No refresh or polling is used.
-              </p>
+            <section className="run-panel preview-run">
+              <div className="section-heading preview-heading">
+                <div>
+                  <p className="eyebrow">EXECUTION PREVIEW</p>
+                  <h2>{selected ? "Ready to stream" : "Live run stream"}</h2>
+                </div>
+                {selected && <span className="run-state idle">Ready</span>}
+              </div>
+              {selected ? (
+                <>
+                  <p className="preview-copy">Run this workflow to stream step state changes here through a GraphQL subscription — no polling or page refresh.</p>
+                  <div className="preview-pipeline">
+                    {selected.steps.map((step) => (
+                      <div className={`preview-step step-${step.step_type}`} key={step.id ?? `${step.step_type}-${step.step_order}`}>
+                        <span className="preview-dot" />
+                        <div>
+                          <strong>{step.name}</strong>
+                          <small>{step.step_type.replaceAll("_", " ")}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="empty-run-inner">
+                  <Radio size={24} />
+                  <p>Select a workflow or create one to preview its execution pipeline.</p>
+                </div>
+              )}
             </section>
           )}
         </div>

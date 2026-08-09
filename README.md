@@ -1,6 +1,21 @@
 # AgentFlow — AI Agent Workflow Builder
 
-A security-first, multi-tenant workflow engine for chaining AI-agent steps. This repository implements the assignment as one end-to-end system: Nhost Auth, PostgreSQL, Hasura permissions/Actions/Event Triggers, Nhost Functions, GraphQL subscriptions, Gemini, and Next.js.
+A security-first, multi-tenant workflow engine for chaining AI-agent steps with human approval, live execution streaming, role-aware controls, and non-manual triggers.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![Hasura](https://img.shields.io/badge/Hasura-GraphQL-1EB4D4?logo=hasura)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-336791?logo=postgresql)
+![Nhost](https://img.shields.io/badge/Nhost-Auth%20%2B%20Functions-4F46E5)
+![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-4285F4?logo=google)
+![CI](https://github.com/ashh-droid/ai-agent-workflow-builder/actions/workflows/ci.yml/badge.svg)
+
+**Live app:** [ai-agent-workflow-builder-seven.vercel.app](https://ai-agent-workflow-builder-seven.vercel.app)  
+**Recording script:** [`docs/DEMO.md`](docs/DEMO.md)  
+**Architecture write-up:** [`WRITEUP.md`](WRITEUP.md)
+
+![AgentFlow completed workflow run](docs/assets/agentflow-completed-run.webp)
+
+The screenshot above is from the deployed Vercel app after a real Gemini classification, conditional branch, HTTP call, human approval, and persisted DB result completed through the Frankfurt Nhost backend.
 
 ## What the final demo proves
 
@@ -11,7 +26,7 @@ A security-first, multi-tenant workflow engine for chaining AI-agent steps. This
 5. `step_runs` stream live over a GraphQL subscription with no polling/page refresh.
 6. An Org B user cannot read, trigger, or approve Org A resources even when the Org A UUID is already known.
 
-See [`WRITEUP.md`](WRITEUP.md) for the design reasoning and [`docs/DEMO.md`](docs/DEMO.md) for the exact recording script.
+The live verification also covers quota settlement, the `org_monthly_usage` Postgres view, retry accounting through `attempt_count`, a negative webhook path that skips the HTTP step, and server-side rejection of cross-organization known-ID attacks.
 
 ## Architecture
 
@@ -54,6 +69,12 @@ Execution tables (`workflow_runs`, `step_runs`) are read-only to ordinary browse
 
 Additional hardening includes hashed webhook secrets, SSRF protection for generic HTTP nodes, timeouts, one retry for LLM/HTTP calls, immutable step snapshots, atomic quota settlement, and notification delivery through an Event Trigger outbox.
 
+## Hosted deployment
+
+The production backend runs on **Nhost `eu-central-1` (Frankfurt)** and the frontend runs on Vercel. An earlier APAC test project was abandoned during setup after a DNS-resolution problem; production was migrated to Frankfurt and all final acceptance tests were run against that backend.
+
+Client-side Vercel environment variables contain only the Nhost subdomain, region, and public GraphQL URL. Gemini, Hasura admin/JWT, webhook, and Grafana secrets remain server-side in Nhost.
+
 ## Repository structure
 
 ```text
@@ -70,6 +91,7 @@ Additional hardening includes hashed webhook secrets, SSRF protection for generi
 │   ├── seed-demo.mjs
 │   └── security-smoke.mjs
 ├── docs/
+│   ├── assets/                # product screenshots
 │   ├── ASSIGNMENT.md
 │   ├── ARCHITECTURE.md
 │   ├── DEMO.md
@@ -95,6 +117,8 @@ For Windows local Nhost development, use WSL2.
 npm install
 npm install --prefix functions
 ```
+
+The root `package-lock.json` pins the frontend dependency graph for reproducible installs.
 
 ### 2. Configure backend secrets
 
@@ -165,11 +189,11 @@ Sign in as the Org A owner, create a workflow, and click **Load reviewer demo**.
 4. `approval_gate` that pauses either branch before persistence.
 5. Owner-only `db_write` into `workflow_results` after approval.
 
-Enable Manual and Webhook triggers and save. The browser deliberately hides/disables restricted controls for lower roles, while the server Action remains the actual enforcement boundary.
+Enable Manual and Webhook triggers and save. The browser hides restricted execution controls from viewers and marks owner-only builder capabilities, while the server Action remains the actual enforcement boundary.
 
 ## Manual run + live subscription
 
-Click **Run**. The Action returns a run ID immediately; the right-side panel subscribes to `step_runs(workflow_run_id = runId)`. When the approval gate is reached, the UI displays **Paused · awaiting approval**. Clicking **Approve & resume** invokes the protected `approveStep` Action and continues the same run.
+Click **Run**. The Action returns a run ID immediately; the right-side panel subscribes to `step_runs(workflow_run_id = runId)`. When the approval gate is reached, the UI displays **Paused · awaiting approval**. Clicking **Approve & resume** invokes the protected `approveStep` Action and continues the same run. The workspace then refreshes the aggregate quota/run status while the step panel continues to update through the subscription.
 
 ## Webhook run
 
@@ -214,6 +238,8 @@ The script asserts that:
 - `triggerWorkflowRun` is rejected;
 - `approveStep` is rejected.
 
+The browser UI is only convenience: the server rejection remains the authoritative proof.
+
 ## Validation
 
 ```bash
@@ -222,11 +248,11 @@ npm run typecheck:functions
 npm run build
 ```
 
-GitHub Actions runs dependency installation, both TypeScript checks, and the Next.js production build on every push/PR.
+GitHub Actions also validates Nhost config, Hasura Action SDL, the PostgreSQL migration on PostgreSQL 14, both TypeScript projects, and the Next.js production build on every push/PR.
 
 ## Deployment / submission
 
-Use [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the Nhost + manual Vercel checklist and [`docs/DEMO.md`](docs/DEMO.md) for the recording. The final submission consists of:
+Use [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the Nhost + Vercel checklist and [`docs/DEMO.md`](docs/DEMO.md) for the final recording. The final submission consists of:
 
 1. this GitHub repository;
 2. the hosted Vercel URL;
