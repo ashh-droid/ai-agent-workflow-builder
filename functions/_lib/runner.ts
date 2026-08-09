@@ -80,7 +80,8 @@ function contextFor(run: RunRecord, previous: unknown): TemplateContext {
 async function executeGemini(config: Record<string, unknown>, context: TemplateContext): Promise<unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
-  const model = typeof config.model === "string" ? config.model : "gemini-3.5-flash";
+  const requestedModel = typeof config.model === "string" ? config.model : "gemini-3.5-flash";
+  const model = requestedModel === "gemini-2.5-flash" ? "gemini-3.5-flash" : requestedModel;
   if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new Error("Invalid Gemini model name");
   const prompt = renderTemplate(typeof config.prompt_template === "string" ? config.prompt_template : "{{prev_output}}", context);
   const jsonMode = config.json_mode !== false;
