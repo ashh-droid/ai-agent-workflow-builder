@@ -1,0 +1,19 @@
+# Design Write-up
+
+## Schema reasoning
+
+The schema keeps the workflow definition separate from execution history. `organizations` owns the monthly quota, `org_members` defines per-organization application roles, and each workflow owns ordered `workflow_steps` plus `workflow_triggers`. A run stores `org_id` as well as `workflow_id` because execution and subscription permissions need a direct organization boundary; composite foreign keys such as `(workflow_id, org_id)` additionally prevent cross-organization relationships from being created accidentally. Step and trigger configuration is JSONB because every node type has different settings, while common execution fields stay relational and queryable. `step_runs` snapshot the step name/type/config at enqueue time so editing a workflow cannot change the meaning of an in-flight or historical run.
+
+Quota is represented with `quota_used` and `quota_remaining`. A run atomically reserves capacity by decrementing `quota_remaining` only when it is greater than zero. A PostgreSQL trigger settles that reservation exactly once when the run becomes terminal: completion consumes the reservation into `quota_used`; failure/cancellation releases it. This avoids the race that would exist if every Action independently read a count and then incremented it.
+
+## Two permission layers
+
+**Layer 1 is data isolation in Hasura.** Nhost authenticates the person and Hasura receives `X-Hasura-User-Id`. The JWT's transport role is simply `user`; `owner`, `editor`, and `viewer` live in `org_members`, allowing one person to hold different roles in different organizations. Every user-readable workflow/run/result table is filtered through its `organization → members` relationship and the session user ID. Org membership management requires an owner. `workflow_runs` and `step_runs` are deliberately read-only to browser users, so a client cannot manufacture a completed run or directly clear an approval gate. Because these filters apply inside Hasura, knowing an Org A UUID does not let an Org B user read that row; a by-primary-key query resolves to `null`.
+
+**Layer 2 is operation-specific business authorization in Nhost Functions.** Workflow saving goes through the `saveWorkflow` Hasura Action. The handler independently resolves membership and allows only an owner to add, modify, or remove `db_write` / `notify` nodes or webhook triggers. An editor may edit ordinary steps but must preserve owner-only definitions. Likewise, `approveStep` resolves the step-run's organization and checks the approver's membership inside the Action handler before changing state. These checks belong in code because they depend on what node is being changed and on a mid-execution decision, not merely on whether a row is generally writable.
+
+## Approval pause/resume
+
+`triggerWorkflowRun` validates owner/editor membership, atomically reserves quota, inserts the `workflow_run`, snapshots all `step_runs`, and immediately returns the run ID. A Hasura Event Trigger picks up the new run asynchronously, which lets the frontend subscribe before execution advances. When the runner reaches an `approval_gate`, that step changes to `waiting_approval`, the run changes to `paused`, and execution returns without creating a new run. The GraphQL subscription therefore shows the paused state live. `approveStep` checks the caller's organization role, atomically marks that same step approved, sets the same run back to running, and resumes from its durable `next_step_order` cursor.
+
+External `llm_call` and `http_request` nodes have an initial attempt plus one retry. Gemini is called only from the backend. Generic HTTP nodes enforce timeouts and reject localhost/private-network destinations and redirects. `notify` writes an outbox row and the actual delivery happens through a Hasura Event Trigger, keeping workflow state transitions separate from notification side effects.
