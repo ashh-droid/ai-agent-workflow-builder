@@ -23,6 +23,7 @@ export const ORG_WORKSPACE = `
 `;
 
 export const SAVE_WORKFLOW = `mutation SaveWorkflow($payload: json!) { saveWorkflow(payload: $payload) { workflow_id success message } }`;
+export const DELETE_WORKFLOW = `mutation DeleteWorkflow($workflowId: uuid!) { delete_workflows_by_pk(id: $workflowId) { id } }`;
 export const TRIGGER_RUN = `mutation TriggerWorkflowRun($workflowId: uuid!, $input: json) { triggerWorkflowRun(workflow_id: $workflowId, input: $input) { run_id status message } }`;
 export const APPROVE_STEP = `mutation ApproveStep($stepRunId: uuid!) { approveStep(step_run_id: $stepRunId) { run_id step_run_id status message } }`;
 export const INSERT_TRIGGER_EVENT = `mutation EmitDatabaseEvent($orgId: uuid!, $eventName: String!, $payload: jsonb!) { insert_trigger_events_one(object: {org_id: $orgId, event_name: $eventName, payload: $payload}) { id } }`;
