@@ -41,8 +41,8 @@ version = '0.50.1'
 mode = 'disabled'
 
 [auth.redirections]
-clientUrl = 'http://localhost:3000'
-allowedUrls = ['http://localhost:3000']
+clientUrl = 'https://ai-agent-workflow-builder-seven.vercel.app'
+allowedUrls = ['http://localhost:3000', 'https://ai-agent-workflow-builder-seven.vercel.app', 'https://*.vercel.app']
 
 [auth.signUp]
 enabled = true
