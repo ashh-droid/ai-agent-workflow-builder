@@ -1,0 +1,14 @@
+- name: scheduled_workflow_dispatch
+  webhook: '{{NHOST_FUNCTIONS_URL}}/events/scheduled-dispatch'
+  schedule: '* * * * *'
+  include_in_metadata: true
+  payload: {}
+  retry_conf:
+    num_retries: 2
+    retry_interval_seconds: 10
+    timeout_seconds: 60
+    tolerance_seconds: 120
+  headers:
+    - name: nhost-webhook-secret
+      value_from_env: NHOST_WEBHOOK_SECRET
+  comment: Dispatches workflow triggers whose cron expression matches the current minute.

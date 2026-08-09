@@ -1,0 +1,10 @@
+type Mutation {
+  saveWorkflow(payload: json!): SaveWorkflowResult!
+  triggerWorkflowRun(workflow_id: uuid!, input: json): WorkflowRunActionResult!
+  approveStep(step_run_id: uuid!): ApproveStepResult!
+  webhookTrigger(workflow_id: uuid!, secret: String!, payload: json): WorkflowRunActionResult!
+}
+
+type SaveWorkflowResult { workflow_id: uuid! success: Boolean! message: String! }
+type WorkflowRunActionResult { run_id: uuid! status: String! message: String! }
+type ApproveStepResult { run_id: uuid! step_run_id: uuid! status: String! message: String! }

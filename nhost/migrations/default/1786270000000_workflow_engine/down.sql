@@ -1,0 +1,13 @@
+DROP VIEW IF EXISTS public.org_monthly_usage;
+DROP TABLE IF EXISTS public.trigger_events CASCADE;
+DROP TABLE IF EXISTS public.notifications CASCADE;
+DROP TABLE IF EXISTS public.workflow_results CASCADE;
+DROP TABLE IF EXISTS public.step_runs CASCADE;
+DROP TABLE IF EXISTS public.workflow_runs CASCADE;
+DROP TABLE IF EXISTS public.workflow_triggers CASCADE;
+DROP TABLE IF EXISTS public.workflow_steps CASCADE;
+DROP TABLE IF EXISTS public.workflows CASCADE;
+DROP TABLE IF EXISTS public.org_members CASCADE;
+DROP TABLE IF EXISTS public.organizations CASCADE;
+DROP FUNCTION IF EXISTS public.settle_workflow_run_quota();
+DROP FUNCTION IF EXISTS public.set_updated_at();
