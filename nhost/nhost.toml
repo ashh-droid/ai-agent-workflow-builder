@@ -178,7 +178,7 @@ limit = 1000
 interval = '1m'
 
 [postgres]
-version = '17.7-20260113-1'
+version = '14.20-20251217-1'
 
 [postgres.resources]
 [postgres.resources.storage]
