@@ -4,6 +4,7 @@ node_modules
 .env.local
 .env.*.local
 !.env.example
+.secrets
 coverage
 .DS_Store
 *.log
