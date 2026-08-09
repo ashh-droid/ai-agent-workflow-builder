@@ -3,7 +3,11 @@ table:
   schema: public
 object_relationships:
   - name: organization
-    using: {foreign_key_constraint_on: org_id}
+    using:
+      manual_configuration:
+        column_mapping: {org_id: id}
+        insertion_order: null
+        remote_table: {name: organizations, schema: public}
   - name: workflow_run
     using:
       manual_configuration:
