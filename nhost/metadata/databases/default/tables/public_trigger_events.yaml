@@ -1,0 +1,47 @@
+table:
+  name: trigger_events
+  schema: public
+object_relationships:
+  - name: organization
+    using: {foreign_key_constraint_on: org_id}
+select_permissions:
+  - role: user
+    permission:
+      columns: [id,org_id,event_name,payload,created_by,created_at]
+      filter:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
+insert_permissions:
+  - role: user
+    permission:
+      columns: [org_id,event_name,payload]
+      set:
+        created_by: X-Hasura-User-Id
+      check:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
+            role:
+              _in: [owner,editor]
+event_triggers:
+  - name: database_event_created
+    definition:
+      enable_manual: false
+      insert:
+        columns: '*'
+    retry_conf:
+      interval_sec: 5
+      num_retries: 2
+      timeout_sec: 60
+    webhook: '{{NHOST_FUNCTIONS_URL}}/events/database-trigger'
+    headers:
+      - name: nhost-webhook-secret
+        value_from_env: NHOST_WEBHOOK_SECRET
+    cleanup_config:
+      batch_size: 10000
+      clean_invocation_logs: true
+      clear_older_than: 168
+      paused: false
+      schedule: 0 0 * * *
+      timeout: 60

@@ -1,0 +1,18 @@
+table:
+  name: org_monthly_usage
+  schema: public
+object_relationships:
+  - name: organization
+    using:
+      manual_configuration:
+        column_mapping: {org_id: id}
+        insertion_order: null
+        remote_table: {name: organizations, schema: public}
+select_permissions:
+  - role: user
+    permission:
+      columns: [org_id,org_name,quota_limit,quota_used,quota_remaining,quota_reserved,total_runs_this_month,avg_run_duration_seconds,successful_runs,failed_runs]
+      filter:
+        organization:
+          members:
+            user_id: {_eq: X-Hasura-User-Id}
