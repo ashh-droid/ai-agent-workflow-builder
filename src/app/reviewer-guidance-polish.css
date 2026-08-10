@@ -1,0 +1,38 @@
+/* Reviewer-facing guidance should read like product help, not fine print. */
+.demo-note {
+  display: block !important;
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(99, 102, 241, 0.13);
+  border-left-color: rgba(99, 102, 241, 0.58);
+  border-radius: 7px;
+  background: rgba(99, 102, 241, 0.055);
+  color: #9da7bb;
+  font-size: 11.5px;
+  font-weight: 520;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+.demo-note::before {
+  content: "Reviewer path · ";
+  color: #a7a9ff;
+  font-weight: 700;
+}
+
+@media (max-height: 760px) and (min-width: 921px) {
+  .demo-note {
+    display: block !important;
+    margin-top: 6px;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 520px) {
+  .demo-note {
+    padding: 8px 9px;
+    font-size: 10.5px;
+  }
+}
