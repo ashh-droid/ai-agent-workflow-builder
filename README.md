@@ -12,6 +12,8 @@
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-4285F4?logo=google)
 
 > **Reviewer link:** use the stable production URL **https://ai-agent-workflow-builder-seven.vercel.app**. Vercel-generated preview URLs such as `*-git-main-*` are not the submission URL and may be protected independently.
+>
+> **Recorded demo:** supplied separately with the submission rather than committed to the repository. The complete step-by-step reviewer walkthrough remains available in [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Try it in two minutes
 
@@ -128,7 +130,7 @@ The project is designed around the assignment's highest-weighted final scenario:
 - [x] Org-level quota/usage aggregation through PostgreSQL/Hasura
 - [x] Cross-org direct-ID read/trigger/approval attempts rejected server-side
 
-For the implementation rationale, see **[`WRITEUP.md`](WRITEUP.md)**. For the recording flow, see **[`docs/DEMO.md`](docs/DEMO.md)**. For the architecture breakdown, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+For the implementation rationale, see **[`WRITEUP.md`](WRITEUP.md)**. For the step-by-step demo walkthrough, see **[`docs/DEMO.md`](docs/DEMO.md)**. For the architecture breakdown, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
 
 ## Repository map
 
