@@ -27,9 +27,14 @@ function defaultConfig(type: StepType): Record<string, any> {
     json_mode: false,
   };
   if (type === "http_request") return {
-    url: "https://httpbin.org/anything?sentiment={{prev_output.text}}",
-    method: "GET",
-    body_template: {},
+    url: "https://httpbin.org/anything",
+    method: "POST",
+    body_template: {
+      sentiment: "{{prev_output.text}}",
+      model: "{{prev_output.model}}",
+      run_id: "{{run_id}}",
+      source: "agentflow-reviewer-demo",
+    },
   };
   if (type === "conditional_branch") return {
     path: "text",
@@ -62,7 +67,7 @@ function reviewerDemo(orgId: string): Workflow {
     steps: [
       { step_order: 1, step_type: "llm_call", name: "Classify sentiment with Gemini", config: defaultConfig("llm_call") },
       { step_order: 2, step_type: "conditional_branch", name: "Route by Gemini output", config: defaultConfig("conditional_branch") },
-      { step_order: 3, step_type: "http_request", name: "Call external API on positive branch", config: defaultConfig("http_request") },
+      { step_order: 3, step_type: "http_request", name: "POST decision payload to external API", config: defaultConfig("http_request") },
       { step_order: 4, step_type: "approval_gate", name: "Human approval checkpoint", config: defaultConfig("approval_gate") },
       { step_order: 5, step_type: "db_write", name: "Persist approved result", config: defaultConfig("db_write") },
       { step_order: 6, step_type: "notify", name: "Publish completion notification", config: defaultConfig("notify") },
