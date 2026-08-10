@@ -1,0 +1,45 @@
+/* Login composition correction: preserve three-zone balance on desktop.
+   The brand stays at the top, the story sits in the visual middle,
+   and proof chips remain anchored near the bottom. */
+
+@media (min-width: 921px) and (min-height: 690px) {
+  .login-story-content {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .login-story-main {
+    align-self: center;
+    width: min(680px, 98%);
+    margin: 0;
+  }
+
+  .login-hero-copy {
+    margin-bottom: clamp(18px, 2.5vh, 28px);
+  }
+
+  .login-proof-row {
+    align-self: end;
+    margin-top: 0;
+    padding-top: 14px;
+  }
+}
+
+/* Short laptops keep the same hierarchy, just with tighter internal spacing. */
+@media (min-width: 921px) and (max-height: 760px) {
+  .login-story-main {
+    margin: 0;
+  }
+
+  .login-hero-copy {
+    margin-bottom: 10px;
+  }
+
+  .login-proof-row {
+    margin-top: 0;
+    padding-top: 8px;
+  }
+}
