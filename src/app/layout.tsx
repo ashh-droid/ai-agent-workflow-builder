@@ -4,6 +4,7 @@ import "./evaluator-polish.css";
 import "./responsive-polish.css";
 import "./final-polish.css";
 import "./reviewer-guidance-polish.css";
+import "./brand-control-polish.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
