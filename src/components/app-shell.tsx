@@ -23,13 +23,15 @@ function bestWorkflow(workflows: Workflow[]) {
     ?? workflows[0];
 }
 
-function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
+function ExecutionPreview({ workflow, role }: { workflow: Workflow | null; role: OrgRole }) {
+  const viewerEmpty = role === "viewer" && !workflow;
+
   return (
     <aside className="execution-panel execution-preview">
       <div className="execution-heading">
         <div>
           <span>Live execution</span>
-          <small>{workflow ? "GraphQL subscription ready" : "Select a saved workflow"}</small>
+          <small>{workflow ? "GraphQL subscription ready" : viewerEmpty ? "Read-only workspace" : "Select a saved workflow"}</small>
         </div>
         {workflow && <span className="status-badge ready">ready</span>}
       </div>
@@ -64,9 +66,11 @@ function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
         </>
       ) : (
         <div className="execution-empty">
-          <Radio size={26} />
-          <strong>Select a workflow</strong>
-          <span>The execution path, trigger state and live subscription will appear here.</span>
+          {viewerEmpty ? <Shield size={26} /> : <Radio size={26} />}
+          <strong>{viewerEmpty ? "No workflow available" : "Select a workflow"}</strong>
+          <span>{viewerEmpty
+            ? "This viewer can only see workflows that belong to the current organization."
+            : "The execution path, trigger state and live subscription will appear here."}</span>
         </div>
       )}
     </aside>
@@ -114,17 +118,20 @@ export function AppShell() {
   const failedWorkflows = useMemo(() => workflows.filter((workflow) => workflow.runs?.[0]?.status === "failed"), [workflows]);
 
   useEffect(() => {
-    if (!orgId || workflowId === "new" || fetching || !workspace) return;
+    if (!orgId || fetching || !workspace) return;
     if (!workflows.length) {
-      if (workflowId !== "new") setWorkflowId("new");
+      const emptySelection = role === "viewer" ? null : "new";
+      if (workflowId !== emptySelection) setWorkflowId(emptySelection);
       return;
     }
+    if (workflowId === "new") return;
     const currentExists = !!workflowId && workflows.some((workflow) => workflow.id === workflowId);
     if (!currentExists) setWorkflowId(bestWorkflow(workflows)?.id ?? null);
-  }, [orgId, workflows, workflowId, fetching, workspace]);
+  }, [orgId, workflows, workflowId, fetching, workspace, role]);
 
   const selected = workflowId === "new" ? null : workflows.find((workflow) => workflow.id === workflowId) ?? null;
   const usage = workspace?.org_monthly_usage?.[0];
+  const viewerHasNoWorkflows = role === "viewer" && !!workspace && !fetching && workflows.length === 0;
 
   const [, saveMutation] = useMutation(SAVE_WORKFLOW);
   const [, deleteMutation] = useMutation(DELETE_WORKFLOW);
@@ -308,7 +315,17 @@ export function AppShell() {
 
       <section className="workflow-canvas">
         {notice && <div className="info-banner"><Radio size={15} />{notice}</div>}
-        {orgId && (
+        {orgId && (viewerHasNoWorkflows ? (
+          <div className="viewer-empty-state">
+            <div className="viewer-empty-card">
+              <div className="viewer-empty-icon"><Shield size={22} /></div>
+              <span className="viewer-empty-eyebrow">Read-only workspace</span>
+              <h1>No workflows available</h1>
+              <p>This viewer can only access workflows that belong to this organization. There are currently no workflows visible in Orbit Labs.</p>
+              <span className="viewer-empty-org">Orbit Labs · viewer access</span>
+            </div>
+          </div>
+        ) : (
           <WorkflowBuilder
             orgId={orgId}
             role={role}
@@ -319,13 +336,13 @@ export function AppShell() {
             onEmitEvent={databaseEvent}
             starting={starting}
           />
-        )}
+        ))}
         {fetching && <div className="sync-pill">Syncing GraphQL…</div>}
       </section>
 
       {runId
         ? <RunViewer runId={runId} role={role} workflow={selected} onRunSettled={() => refresh({ requestPolicy: "network-only" })} />
-        : <ExecutionPreview workflow={selected} />}
+        : <ExecutionPreview workflow={selected} role={role} />}
     </main>
   );
 }
