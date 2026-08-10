@@ -11,6 +11,8 @@
 ![Nhost](https://img.shields.io/badge/Nhost-Auth%20%2B%20Functions-4F46E5)
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-4285F4?logo=google)
 
+> **Reviewer link:** use the stable production URL **https://ai-agent-workflow-builder-seven.vercel.app**. Vercel-generated preview URLs such as `*-git-main-*` are not the submission URL and may be protected independently.
+
 ## Try it in two minutes
 
 Open the **[live app](https://ai-agent-workflow-builder-seven.vercel.app)**. The login screen includes four isolated reviewer accounts, so no setup is required.
@@ -20,7 +22,8 @@ Open the **[live app](https://ai-agent-workflow-builder-seven.vercel.app)**. The
 3. Click **Run workflow** and watch the right-hand execution timeline update live.
 4. At the approval gate, click **Approve and resume**.
 5. Confirm the same run continues through protected persistence and notification.
-6. Sign in as **Viewer B · Orbit Labs** to verify that cross-organization data and execution controls are unavailable.
+6. Sign in as **Editor A · Northstar AI** to verify same-org approval capability.
+7. Sign in as **Viewer B · Orbit Labs** to verify cross-organization data and execution controls are unavailable.
 
 The strongest reviewer workflow is:
 
@@ -28,17 +31,17 @@ The strongest reviewer workflow is:
 Gemini LLM
    ↓
 Conditional branch
-   ├─ POSITIVE → real HTTP request ─┐
-   └─ NEGATIVE ────────────────────┤
-                                   ↓
-                           Human approval
-                                   ↓
-                           Database write
-                                   ↓
-                            Notification
+   ├─ POSITIVE → POST JSON payload to external API ─┐
+   └─ NEGATIVE ────────────────────────────────────┤
+                                                   ↓
+                                           Human approval
+                                                   ↓
+                                           Database write
+                                                   ↓
+                                            Notification
 ```
 
-Manual and webhook triggers are enabled. A negative input skips the HTTP node, which makes the conditional branch visibly change execution rather than acting as a decorative step.
+Manual and webhook triggers are enabled. A positive result sends the Gemini decision, model, run ID, and demo source in a real JSON POST request. A negative result skips the HTTP node entirely, so the branch visibly changes execution rather than acting as a decorative step.
 
 ## What AgentFlow demonstrates
 
@@ -48,6 +51,7 @@ Manual and webhook triggers are enabled. A negative input skips the HTTP node, w
 | **Role-aware workflow building** | Owners can use protected DB/notify/webhook capabilities; editors have narrower write access; viewers are read-only. |
 | **Real AI execution** | Gemini classifies runtime input inside an `llm_call` node. |
 | **True conditional routing** | The branch changes the next executed step based on Gemini output. |
+| **Real outbound integration** | `http_request` performs an SSRF-guarded external POST with a templated JSON payload. |
 | **Human-in-the-loop control** | `approval_gate` pauses the run and resumes the exact same run after authorization. |
 | **Live observability** | `step_runs` stream into the UI through GraphQL subscriptions without polling or page refresh. |
 | **Non-manual execution** | Webhook, scheduled, and database-event trigger paths are wired through Hasura/Nhost. |
@@ -79,7 +83,7 @@ Nhost execution worker
       │
       ├── Gemini
       ├── conditional branch
-      ├── HTTP
+      ├── HTTP POST
       ├── approval pause/resume
       ├── DB persistence
       └── notification outbox
@@ -101,7 +105,7 @@ AgentFlow uses two separate authorization layers rather than trusting UI visibil
 Additional hardening includes:
 
 - hashed webhook secrets;
-- SSRF protection and timeouts for HTTP nodes;
+- SSRF protection, redirect blocking, allowlisted HTTP methods, and request timeouts for HTTP nodes;
 - immutable step snapshots for in-flight runs;
 - one retry for LLM and HTTP failures with `attempt_count` recorded;
 - atomic quota reservation/settlement;
@@ -124,7 +128,7 @@ The project is designed around the assignment's highest-weighted final scenario:
 - [x] Org-level quota/usage aggregation through PostgreSQL/Hasura
 - [x] Cross-org direct-ID read/trigger/approval attempts rejected server-side
 
-For the implementation rationale, see **[`WRITEUP.md`](WRITEUP.md)**. For the short recording flow, see **[`docs/DEMO.md`](docs/DEMO.md)**. For the architecture breakdown, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+For the implementation rationale, see **[`WRITEUP.md`](WRITEUP.md)**. For the recording flow, see **[`docs/DEMO.md`](docs/DEMO.md)**. For the architecture breakdown, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
 
 ## Repository map
 
@@ -137,6 +141,7 @@ nhost/metadata/              Hasura permissions, relationships, Actions, trigger
 scripts/security-smoke.mjs   cross-organization attack verification
 docs/                        architecture, demo and deployment documentation
 WRITEUP.md                   concise design/security rationale
+LICENSE                      MIT license
 ```
 
 ## Technology choices
@@ -203,4 +208,5 @@ GitHub Actions additionally validates the Nhost configuration, Hasura Action SDL
 
 **Live application:** https://ai-agent-workflow-builder-seven.vercel.app  
 **Architecture rationale:** [`WRITEUP.md`](WRITEUP.md)  
-**Demo walkthrough:** [`docs/DEMO.md`](docs/DEMO.md)
+**Demo walkthrough:** [`docs/DEMO.md`](docs/DEMO.md)  
+**License:** [MIT](LICENSE)
