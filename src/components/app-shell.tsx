@@ -114,10 +114,14 @@ export function AppShell() {
   const failedWorkflows = useMemo(() => workflows.filter((workflow) => workflow.runs?.[0]?.status === "failed"), [workflows]);
 
   useEffect(() => {
-    if (!orgId || workflowId === "new") return;
-    const currentExists = workflowId && workflows.some((workflow) => workflow.id === workflowId);
-    if (!currentExists) setWorkflowId(bestWorkflow(workflows)?.id ?? "new");
-  }, [orgId, workflows, workflowId]);
+    if (!orgId || workflowId === "new" || fetching || !workspace) return;
+    if (!workflows.length) {
+      if (workflowId !== "new") setWorkflowId("new");
+      return;
+    }
+    const currentExists = !!workflowId && workflows.some((workflow) => workflow.id === workflowId);
+    if (!currentExists) setWorkflowId(bestWorkflow(workflows)?.id ?? null);
+  }, [orgId, workflows, workflowId, fetching, workspace]);
 
   const selected = workflowId === "new" ? null : workflows.find((workflow) => workflow.id === workflowId) ?? null;
   const usage = workspace?.org_monthly_usage?.[0];
@@ -235,21 +239,32 @@ export function AppShell() {
     <main className="app-layout with-topbar">
       <header className="app-topbar">
         <div className="topbar-left">
-          <div className="topbar-icon">a</div>
           <div className="wordmark wordmark-small">agent<span>flow</span></div>
-          <div className="topbar-divider" />
-          <label className="topbar-org-control" aria-label="Organization">
-            <select
-              value={orgId ?? ""}
-              onChange={(event) => {
-                setOrgId(event.target.value);
-                setRunId(null);
-                setWorkflowId(null);
-              }}
-            >
-              {memberships.map((item) => <option value={item.organization.id} key={item.organization.id}>{item.organization.name}</option>)}
-            </select>
-          </label>
+          <details className="org-switcher">
+            <summary aria-label="Switch organization">
+              <span>{membership?.organization.name ?? "Organization"}</span>
+              <ChevronDown size={14} />
+            </summary>
+            <div className="org-switcher-menu">
+              {memberships.map((item) => (
+                <button
+                  type="button"
+                  className={item.organization.id === orgId ? "active" : ""}
+                  key={item.organization.id}
+                  onClick={(event) => {
+                    setOrgId(item.organization.id);
+                    setRunId(null);
+                    setWorkflowId(null);
+                    const details = event.currentTarget.closest("details");
+                    if (details) details.open = false;
+                  }}
+                >
+                  <span>{item.organization.name}</span>
+                  <small>{item.role}</small>
+                </button>
+              ))}
+            </div>
+          </details>
           <span className="topbar-role-badge">{role}</span>
         </div>
 
@@ -259,8 +274,8 @@ export function AppShell() {
             <div className="quota-bar-track"><div className="quota-bar-fill" style={{ width: `${Math.min(100, (quotaUsed / Math.max(1, quotaLimit)) * 100)}%` }} /></div>
             <small>{quotaRemaining} available</small>
           </div>
-          <button className="user-avatar" onClick={signOut} title={`Sign out ${signedInEmail}`} aria-label={`Sign out ${signedInEmail}`}>
-            {signedInEmail.slice(0, 1).toUpperCase()}<LogOut size={12} />
+          <button className="sign-out-button" onClick={signOut} title={`Sign out ${signedInEmail}`} aria-label={`Sign out ${signedInEmail}`}>
+            <LogOut size={14} /><span>Sign out</span>
           </button>
         </div>
       </header>
