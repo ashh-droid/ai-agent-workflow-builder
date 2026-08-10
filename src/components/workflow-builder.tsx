@@ -19,28 +19,58 @@ function stepMeta(type: StepType) {
 }
 
 function defaultConfig(type: StepType): Record<string, any> {
-  if (type === "llm_call") return { model: "gemini-3.5-flash-lite", prompt_template: "Classify the sentiment of this text: {{input.text}}. Reply with exactly one word: POSITIVE or NEGATIVE.", temperature: 0, max_tokens: 128, json_mode: false };
-  if (type === "http_request") return { url: "https://httpbin.org/post", method: "POST", body_template: { analysis: "{{prev_output}}" } };
-  if (type === "conditional_branch") return { path: "text", operator: "contains", value: "POSITIVE", true_step_order: 3, false_step_order: 4 };
-  if (type === "approval_gate") return { message: "Review the external-call result before saving", required_role: "owner_or_editor" };
-  if (type === "db_write") return { result_key: "approved_analysis", data: "{{prev_output}}" };
-  return { channel: "demo", message_template: "Workflow {{run_id}} completed a notify step." };
+  if (type === "llm_call") return {
+    model: "gemini-3.5-flash-lite",
+    prompt_template: "Classify the sentiment of this text: {{input.text}}. Reply with exactly one word: POSITIVE or NEGATIVE.",
+    temperature: 0,
+    max_tokens: 128,
+    json_mode: false,
+  };
+  if (type === "http_request") return {
+    url: "https://httpbin.org/anything?sentiment={{prev_output.text}}",
+    method: "GET",
+    body_template: {},
+  };
+  if (type === "conditional_branch") return {
+    path: "text",
+    operator: "contains",
+    value: "POSITIVE",
+    true_step_order: 3,
+    false_step_order: 4,
+  };
+  if (type === "approval_gate") return {
+    message: "Review the AI decision and downstream payload before protected persistence.",
+    required_role: "owner_or_editor",
+  };
+  if (type === "db_write") return {
+    result_key: "approved_sentiment_demo",
+    data: "{{prev_output}}",
+  };
+  return {
+    channel: "demo",
+    destination: "reviewer-outbox",
+    message_template: "AgentFlow run {{run_id}} completed after human approval.",
+  };
 }
 
 function reviewerDemo(orgId: string): Workflow {
   return {
     org_id: orgId,
-    name: "Launch Sentiment Guardrail",
-    description: "Analyze → branch → request → review → save",
+    name: "Customer Sentiment Release Guardrail",
+    description: "Gemini classification → conditional route → real HTTP call → human approval → protected DB write → notification.",
     is_active: true,
     steps: [
-      { step_order: 1, step_type: "llm_call", name: "Sentiment analysis", config: defaultConfig("llm_call") },
-      { step_order: 2, step_type: "conditional_branch", name: "Route by sentiment", config: { path: "text", operator: "contains", value: "POSITIVE", true_step_order: 3, false_step_order: 4 } },
-      { step_order: 3, step_type: "http_request", name: "Post to httpbin", config: defaultConfig("http_request") },
-      { step_order: 4, step_type: "approval_gate", name: "Human review", config: defaultConfig("approval_gate") },
-      { step_order: 5, step_type: "db_write", name: "Save result", config: defaultConfig("db_write") },
+      { step_order: 1, step_type: "llm_call", name: "Classify sentiment with Gemini", config: defaultConfig("llm_call") },
+      { step_order: 2, step_type: "conditional_branch", name: "Route by Gemini output", config: defaultConfig("conditional_branch") },
+      { step_order: 3, step_type: "http_request", name: "Call external API on positive branch", config: defaultConfig("http_request") },
+      { step_order: 4, step_type: "approval_gate", name: "Human approval checkpoint", config: defaultConfig("approval_gate") },
+      { step_order: 5, step_type: "db_write", name: "Persist approved result", config: defaultConfig("db_write") },
+      { step_order: 6, step_type: "notify", name: "Publish completion notification", config: defaultConfig("notify") },
     ],
-    triggers: [{ trigger_type: "manual", config: {}, is_active: true }],
+    triggers: [
+      { trigger_type: "manual", config: {}, is_active: true },
+      { trigger_type: "webhook", config: { secret: "agentflow-reviewer-webhook-2026" }, is_active: true },
+    ],
   };
 }
 
@@ -156,10 +186,10 @@ export function WorkflowBuilder({
         </div>
 
         <div className="workflow-toolbar-actions">
-          {role === "owner" && <button className="toolbar-button demo-button" onClick={() => setDraft(reviewerDemo(orgId))}><Zap size={13} />Reviewer demo</button>}
+          {role === "owner" && <button className="toolbar-button demo-button" onClick={() => setDraft(reviewerDemo(orgId))}><Zap size={14} />Load best demo</button>}
 
           <details className="toolbar-menu">
-            <summary className="toolbar-button"><Settings2 size={13} />Settings</summary>
+            <summary className="toolbar-button"><Settings2 size={14} />Settings</summary>
             <div className="toolbar-popover settings-popover">
               <label>Status<select value={draft.is_active ? "active" : "inactive"} disabled={role === "viewer"} onChange={(event) => setDraft({ ...draft, is_active: event.target.value === "active" })}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
               <label>Description<textarea value={draft.description ?? ""} disabled={role === "viewer"} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
@@ -168,7 +198,7 @@ export function WorkflowBuilder({
           </details>
 
           <details className="toolbar-menu trigger-menu">
-            <summary className="toolbar-button"><Webhook size={13} />Triggers <span className="trigger-count">{draft.triggers.filter((item) => item.is_active).length}</span></summary>
+            <summary className="toolbar-button"><Webhook size={14} />Triggers <span className="trigger-count">{draft.triggers.filter((item) => item.is_active).length}</span></summary>
             <div className="toolbar-popover triggers-popover">
               <div className="trigger-grid compact-trigger-grid">
                 <TriggerToggle label="Manual" icon={<Zap size={14} />} checked={!!trigger("manual")} disabled={role === "viewer"} onChange={(value) => toggleTrigger("manual", value)} />
@@ -183,7 +213,7 @@ export function WorkflowBuilder({
             </div>
           </details>
 
-          {role !== "viewer" && <button className="toolbar-button" onClick={() => void save()} disabled={saving}><Save size={13} />{saving ? "Saving…" : "Save"}</button>}
+          {role !== "viewer" && <button className="toolbar-button" onClick={() => void save()} disabled={saving}><Save size={14} />{saving ? "Saving…" : "Save"}</button>}
           {workflow?.id && role !== "viewer" && <button className="run-workflow-button" onClick={() => void onRun()} disabled={starting}><span>▶</span>{starting ? "Queueing…" : "Run workflow"}</button>}
         </div>
       </div>
@@ -224,7 +254,7 @@ export function WorkflowBuilder({
         })}
       </div>
 
-      {role !== "viewer" && <div className="add-step-bar">{stepTypes.map((item) => <button key={item.type} className="add-step-btn" data-type={item.type} disabled={restricted.has(item.type) && role !== "owner"} onClick={() => addStep(item.type)}><Plus size={11} />{item.short}{restricted.has(item.type) && <span>owner</span>}</button>)}</div>}
+      {role !== "viewer" && <div className="add-step-bar">{stepTypes.map((item) => <button key={item.type} className="add-step-btn" data-type={item.type} disabled={restricted.has(item.type) && role !== "owner"} onClick={() => addStep(item.type)}><Plus size={12} />{item.short}{restricted.has(item.type) && <span>owner</span>}</button>)}</div>}
     </section>
   );
 }

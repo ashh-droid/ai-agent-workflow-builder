@@ -13,10 +13,10 @@ const demoAccounts = [
 ];
 
 const previewSteps = [
-  { type: "llm_call", label: "LLM", description: "Gemini classification" },
-  { type: "conditional_branch", label: "IF", description: "Route by output" },
-  { type: "approval_gate", label: "GATE", description: "Human approval" },
-  { type: "db_write", label: "DB", description: "Persist result" },
+  { type: "llm_call", label: "LLM", description: "Gemini classifies the input" },
+  { type: "conditional_branch", label: "IF", description: "Output changes the path" },
+  { type: "approval_gate", label: "GATE", description: "Human approval pauses execution" },
+  { type: "db_write", label: "DB", description: "Approved result is persisted" },
 ];
 
 export function LoginForm() {
@@ -71,28 +71,36 @@ export function LoginForm() {
         <div className="login-dot-grid" />
         <div className="login-glow" />
         <div className="login-story-content">
-          <div>
+          <div className="login-brand-block">
             <div className="wordmark wordmark-large">agent<span>flow</span></div>
-            <p className="login-tagline">Orchestrate AI workflows with precision.</p>
+            <p className="login-tagline">Secure orchestration for AI agents.</p>
           </div>
 
-          <div className="login-pipeline" aria-label="Workflow pipeline preview">
-            {previewSteps.map((step, index) => (
-              <div className={`login-pipeline-step step-${step.type}`} key={step.type}>
-                <div className="login-pipeline-node"><span /></div>
-                <div className="login-pipeline-line" />
-                <code>{step.label}</code>
-                <span>{step.description}</span>
-                {index < previewSteps.length - 1 && <div className="login-pipeline-connector" />}
-              </div>
-            ))}
+          <div className="login-story-main">
+            <div className="login-hero-copy">
+              <span className="login-kicker">MULTI-ORG · LIVE · GUARDED</span>
+              <h2>Build agent workflows that stay observable and human-controlled.</h2>
+              <p>Compose Gemini, conditional routing, real HTTP calls, approval gates and database writes — with organization isolation and role enforcement at every layer.</p>
+            </div>
+
+            <div className="login-pipeline" aria-label="Workflow pipeline preview">
+              {previewSteps.map((step, index) => (
+                <div className={`login-pipeline-step step-${step.type}`} key={step.type}>
+                  <div className="login-pipeline-node"><span /></div>
+                  <div className="login-pipeline-line" />
+                  <code>{step.label}</code>
+                  <span>{step.description}</span>
+                  {index < previewSteps.length - 1 && <div className="login-pipeline-connector" />}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="login-proof-row">
-            <span><ShieldCheck size={12} />Multi-org isolation</span>
-            <span><GitBranch size={12} />Conditional routing</span>
-            <span><Sparkles size={12} />Live subscriptions</span>
-            <span><Check size={12} />Approval gates</span>
+            <span><ShieldCheck size={14} />Multi-org isolation</span>
+            <span><GitBranch size={14} />Conditional routing</span>
+            <span><Sparkles size={14} />Live subscriptions</span>
+            <span><Check size={14} />Approval gates</span>
           </div>
         </div>
       </section>
@@ -101,9 +109,9 @@ export function LoginForm() {
         <div className="login-form-card">
           <div className="mobile-wordmark wordmark">agent<span>flow</span></div>
           <div className="login-heading">
-            <p>{mode === "signin" ? "WELCOME BACK" : "CREATE ACCOUNT"}</p>
-            <h1>{mode === "signin" ? "Sign in" : "Create account"}</h1>
-            <span>{mode === "signin" ? "Choose a reviewer account or enter credentials." : "Create a new Nhost Auth account."}</span>
+            <p>{mode === "signin" ? "REVIEWER ACCESS" : "CREATE ACCOUNT"}</p>
+            <h1>{mode === "signin" ? "Welcome to AgentFlow" : "Create account"}</h1>
+            <span>{mode === "signin" ? "Choose a demo role below or enter credentials." : "Create a new Nhost Auth account."}</span>
           </div>
 
           <div className="auth-tabs compact-tabs">
@@ -118,13 +126,13 @@ export function LoginForm() {
             <label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner-a@example.com" /></label>
             <label>Password<input type="password" required minLength={9} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 9 characters" /></label>
             {error && <div className="error-banner">{error}</div>}
-            <button className="primary login-submit" disabled={busy}>{busy ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}</button>
+            <button className="primary login-submit" disabled={busy}>{busy ? "Signing in…" : mode === "signin" ? "Sign in to workspace" : "Create account"}</button>
           </form>
 
           {mode === "signin" && (
             <div className="demo-credentials">
               <div className="demo-credentials-heading">
-                <div><strong>Reviewer accounts</strong><span>Click any account to autofill</span></div>
+                <div><strong>Reviewer accounts</strong><span>One click fills the credentials</span></div>
                 <span className="demo-live-pill">LIVE DEMO</span>
               </div>
               <div className="demo-account-list">
@@ -139,11 +147,11 @@ export function LoginForm() {
                       <strong>{account.email}</strong>
                       <code>{account.password}</code>
                     </div>
-                    <span>{account.role} · {account.org}</span>
+                    <span>{account.role}<small>{account.org}</small></span>
                   </button>
                 ))}
               </div>
-              <p className="demo-note">These credentials are intentionally published for the isolated assignment demo environment only.</p>
+              <p className="demo-note">Use Owner A for the complete workflow demo, Editor A for approval, and Viewer B to verify cross-org restrictions.</p>
             </div>
           )}
         </div>

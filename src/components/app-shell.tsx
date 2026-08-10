@@ -1,8 +1,8 @@
 "use client";
 
-import { LogOut, Plus, Radio, Shield, Workflow as WorkflowIcon } from "lucide-react";
+import { ChevronDown, History, LogOut, Plus, Radio, Shield, Workflow as WorkflowIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "urql";
 import { DELETE_WORKFLOW, INSERT_TRIGGER_EVENT, MY_ORGS, ORG_WORKSPACE, SAVE_WORKFLOW, TRIGGER_RUN } from "@/lib/graphql";
 import type { Membership, OrgRole, Workflow } from "@/lib/types";
@@ -16,21 +16,35 @@ function statusLabel(status?: string) {
   return status.replaceAll("_", " ");
 }
 
+function bestWorkflow(workflows: Workflow[]) {
+  return workflows.find((workflow) => /final/i.test(workflow.name) && workflow.runs?.[0]?.status === "completed")
+    ?? workflows.find((workflow) => workflow.runs?.[0]?.status === "completed")
+    ?? workflows.find((workflow) => workflow.runs?.[0]?.status !== "failed")
+    ?? workflows[0];
+}
+
 function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
   return (
     <aside className="execution-panel execution-preview">
       <div className="execution-heading">
-        <div><span>Live execution</span><small>{workflow ? "Ready for a run" : "No workflow selected"}</small></div>
+        <div>
+          <span>Live execution</span>
+          <small>{workflow ? "GraphQL subscription ready" : "Select a saved workflow"}</small>
+        </div>
         {workflow && <span className="status-badge ready">ready</span>}
       </div>
 
       {workflow ? (
         <>
-          <div className="execution-meta">subscription idle · waiting for run</div>
+          <div className="execution-preview-card">
+            <span className="section-label">Execution path</span>
+            <strong>{workflow.steps.length} guarded steps</strong>
+            <p>State changes stream here in real time. Approval gates pause execution before protected writes continue.</p>
+          </div>
           <div className="execution-timeline skeleton-timeline">
             {workflow.steps.map((step) => (
               <div className={`execution-step pending-dim step-${step.step_type}`} key={step.id ?? `${step.step_type}-${step.step_order}`}>
-                <div className="execution-step-icon pending">·</div>
+                <div className="execution-step-icon pending">{step.step_order}</div>
                 <div className="execution-step-copy">
                   <span className="step-label">{step.name}</span>
                   <span className="step-detail">{step.step_type.replaceAll("_", " ")}</span>
@@ -38,7 +52,6 @@ function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
               </div>
             ))}
           </div>
-          <p className="execution-help">Run the workflow to stream step state changes here through the live GraphQL subscription.</p>
           <div className="execution-footer">
             <span className="section-label">Active triggers</span>
             <div className="trigger-pill-row">
@@ -51,9 +64,9 @@ function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
         </>
       ) : (
         <div className="execution-empty">
-          <Radio size={22} />
+          <Radio size={26} />
           <strong>Select a workflow</strong>
-          <span>Its execution path will appear here before you run it.</span>
+          <span>The execution path, trigger state and live subscription will appear here.</span>
         </div>
       )}
     </aside>
@@ -97,14 +110,16 @@ export function AppShell() {
   });
 
   const workflows: Workflow[] = workspace?.workflows ?? [];
+  const healthyWorkflows = useMemo(() => workflows.filter((workflow) => workflow.runs?.[0]?.status !== "failed"), [workflows]);
+  const failedWorkflows = useMemo(() => workflows.filter((workflow) => workflow.runs?.[0]?.status === "failed"), [workflows]);
 
   useEffect(() => {
-    if (orgId && workflowId !== "new" && !workflows.some((wf) => wf.id === workflowId)) {
-      setWorkflowId(workflows[0]?.id ?? "new");
-    }
+    if (!orgId || workflowId === "new") return;
+    const currentExists = workflowId && workflows.some((workflow) => workflow.id === workflowId);
+    if (!currentExists) setWorkflowId(bestWorkflow(workflows)?.id ?? "new");
   }, [orgId, workflows, workflowId]);
 
-  const selected = workflowId === "new" ? null : workflows.find((wf) => wf.id === workflowId) ?? null;
+  const selected = workflowId === "new" ? null : workflows.find((workflow) => workflow.id === workflowId) ?? null;
   const usage = workspace?.org_monthly_usage?.[0];
 
   const [, saveMutation] = useMutation(SAVE_WORKFLOW);
@@ -196,6 +211,25 @@ export function AppShell() {
   const signedInEmail = session.user?.email ?? "signed-in user";
   const quotaUsed = usage?.quota_used ?? membership?.organization.quota_used ?? 0;
   const quotaLimit = usage?.quota_limit ?? membership?.organization.quota_limit ?? 100;
+  const quotaRemaining = usage?.quota_remaining ?? membership?.organization.quota_remaining ?? 0;
+
+  function workflowButton(workflow: Workflow) {
+    const latestStatus = workflow.runs?.[0]?.status;
+    return (
+      <button
+        key={workflow.id}
+        className={`workflow-list-item ${workflowId === workflow.id ? "active" : ""}`}
+        onClick={() => { setWorkflowId(workflow.id!); setRunId(null); }}
+      >
+        <WorkflowIcon size={16} />
+        <span>
+          <strong>{workflow.name}</strong>
+          <small>{workflow.steps.length} steps</small>
+        </span>
+        <em className={`workflow-list-status status-${latestStatus ?? "never"}`}>{statusLabel(latestStatus)}</em>
+      </button>
+    );
+  }
 
   return (
     <main className="app-layout with-topbar">
@@ -220,43 +254,41 @@ export function AppShell() {
         </div>
 
         <div className="topbar-right">
-          <div className="topbar-quota" title={`${usage?.quota_remaining ?? 0} available · ${usage?.quota_reserved ?? 0} reserved`}>
-            <span>{quotaUsed} / {quotaLimit}</span>
+          <div className="topbar-quota" title={`${quotaRemaining} available · ${usage?.quota_reserved ?? 0} reserved`}>
+            <div><strong>{quotaUsed}</strong><span>of {quotaLimit} runs</span></div>
             <div className="quota-bar-track"><div className="quota-bar-fill" style={{ width: `${Math.min(100, (quotaUsed / Math.max(1, quotaLimit)) * 100)}%` }} /></div>
+            <small>{quotaRemaining} available</small>
           </div>
           <button className="user-avatar" onClick={signOut} title={`Sign out ${signedInEmail}`} aria-label={`Sign out ${signedInEmail}`}>
-            {signedInEmail.slice(0, 1).toUpperCase()}<LogOut size={11} />
+            {signedInEmail.slice(0, 1).toUpperCase()}<LogOut size={12} />
           </button>
         </div>
       </header>
 
       <aside className="app-sidebar">
+        <div className="sidebar-intro">
+          <span>Workflows</span>
+          <strong>{healthyWorkflows.length}</strong>
+        </div>
         <div className="sidebar-utility">
           {role !== "viewer" && (
             <button className="new-workflow-button" onClick={() => { setWorkflowId("new"); setRunId(null); }}>
-              <Plus size={13} />New workflow
+              <Plus size={14} />New workflow
             </button>
           )}
         </div>
         <nav className="workflow-list">
-          {workflows.map((workflow) => {
-            const latestStatus = workflow.runs?.[0]?.status;
-            return (
-              <button
-                key={workflow.id}
-                className={`workflow-list-item ${workflowId === workflow.id ? "active" : ""}`}
-                onClick={() => { setWorkflowId(workflow.id!); setRunId(null); }}
-              >
-                <WorkflowIcon size={14} />
-                <span>
-                  <strong>{workflow.name}</strong>
-                  <small>{workflow.steps.length} steps · {statusLabel(latestStatus)}</small>
-                </span>
-              </button>
-            );
-          })}
+          {healthyWorkflows.map(workflowButton)}
         </nav>
-        <div className="sidebar-account"><span>{signedInEmail}</span></div>
+
+        {failedWorkflows.length > 0 && (
+          <details className="development-history">
+            <summary><History size={13} /><span>Development history</span><em>{failedWorkflows.length}</em><ChevronDown size={13} /></summary>
+            <div className="development-history-list">{failedWorkflows.map(workflowButton)}</div>
+          </details>
+        )}
+
+        <div className="sidebar-account"><span>{signedInEmail}</span><small>{role} access</small></div>
       </aside>
 
       <section className="workflow-canvas">
