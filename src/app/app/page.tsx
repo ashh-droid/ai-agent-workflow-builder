@@ -1,2 +1,11 @@
 import { AppShell } from "@/components/app-shell";
-export default function WorkspacePage() { return <AppShell />; }
+import { PopoverDismissController } from "@/components/popover-dismiss-controller";
+
+export default function WorkspacePage() {
+  return (
+    <>
+      <PopoverDismissController />
+      <AppShell />
+    </>
+  );
+}
