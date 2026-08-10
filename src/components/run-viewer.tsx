@@ -72,6 +72,7 @@ export function RunViewer({
           const summary = outputSummary(step);
           const paused = step.status === "waiting_approval";
           const pending = step.status === "pending";
+          const hasInspectionData = Boolean(step.error) || step.input != null || step.output != null;
           return (
             <div className={`execution-step step-${step.step_type} ${paused ? "paused-highlight" : ""} ${pending ? "pending-dim" : ""}`} key={step.id}>
               <div className={`execution-step-icon ${step.status}`}>{statusIcon(step.status)}</div>
@@ -85,7 +86,7 @@ export function RunViewer({
                   <ShieldCheck size={13} />{approving ? "Approving…" : "Approve and resume"}
                 </button>
               )}
-              {(step.error || step.input || step.output) && (
+              {hasInspectionData && (
                 <details className="execution-details">
                   <summary>Inspect</summary>
                   <pre>{JSON.stringify({ input: step.input, output: step.output, error: step.error }, null, 2)}</pre>
