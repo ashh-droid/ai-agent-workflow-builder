@@ -1,0 +1,78 @@
+/* Clear read-only empty state for viewers in organizations with no visible workflows. */
+.viewer-empty-state {
+  min-height: calc(100vh - 88px);
+  display: grid;
+  place-items: center;
+  padding: 48px 36px;
+}
+
+.viewer-empty-card {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34px 32px;
+  border: .5px solid var(--border-hover);
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(99, 102, 241, .07), rgba(14, 16, 23, .88) 42%, rgba(14, 16, 23, .96));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+  text-align: center;
+}
+
+.viewer-empty-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border: .5px solid var(--accent-border);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.viewer-empty-eyebrow {
+  margin-bottom: 8px;
+  color: var(--accent-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.viewer-empty-card h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(22px, 2.1vw, 28px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+.viewer-empty-card p {
+  max-width: 430px;
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.viewer-empty-org {
+  margin-top: 18px;
+  padding: 7px 10px;
+  border: .5px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .02);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .viewer-empty-state {
+    min-height: 52vh;
+    padding: 30px 18px;
+  }
+
+  .viewer-empty-card {
+    padding: 28px 22px;
+  }
+}
