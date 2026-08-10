@@ -94,7 +94,7 @@ export function LoginForm() {
           <div className="login-heading">
             <p>REVIEWER ACCESS</p>
             <h1>Welcome to AgentFlow</h1>
-            <span>Choose a demo role below or enter credentials.</span>
+            <span>Choose a reviewer account below or enter your credentials.</span>
           </div>
 
           <div className="auth-tabs compact-tabs">
