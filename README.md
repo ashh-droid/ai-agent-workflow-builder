@@ -1,151 +1,180 @@
-# AgentFlow — AI Agent Workflow Builder
+# AgentFlow
 
-A security-first, multi-tenant workflow engine for chaining AI-agent steps with human approval, live execution streaming, role-aware controls, and non-manual triggers.
+**Secure, multi-tenant AI workflow orchestration with live execution, conditional routing, human approval, and role-aware controls.**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-6366F1?style=for-the-badge&logo=vercel&logoColor=white)](https://ai-agent-workflow-builder-seven.vercel.app)
+[![CI](https://img.shields.io/github/actions/workflow/status/ashh-droid/ai-agent-workflow-builder/ci.yml?style=for-the-badge&label=CI)](https://github.com/ashh-droid/ai-agent-workflow-builder/actions/workflows/ci.yml)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![Hasura](https://img.shields.io/badge/Hasura-GraphQL-1EB4D4?logo=hasura)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-336791?logo=postgresql)
 ![Nhost](https://img.shields.io/badge/Nhost-Auth%20%2B%20Functions-4F46E5)
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-4285F4?logo=google)
-![CI](https://github.com/ashh-droid/ai-agent-workflow-builder/actions/workflows/ci.yml/badge.svg)
 
-**Live app:** [ai-agent-workflow-builder-seven.vercel.app](https://ai-agent-workflow-builder-seven.vercel.app)  
-**Recording script:** [`docs/DEMO.md`](docs/DEMO.md)  
-**Architecture write-up:** [`WRITEUP.md`](WRITEUP.md)
+## Try it in two minutes
 
-![AgentFlow completed workflow run](docs/assets/agentflow-completed-run.webp)
+Open the **[live app](https://ai-agent-workflow-builder-seven.vercel.app)**. The login screen includes four isolated reviewer accounts, so no setup is required.
 
-The screenshot above is from the deployed Vercel app after a real Gemini classification, conditional branch, HTTP call, human approval, and persisted DB result completed through the Frankfurt Nhost backend.
+1. Choose **Owner A · Northstar AI** and sign in.
+2. Open the completed workflow or click **Load best demo**.
+3. Click **Run workflow** and watch the right-hand execution timeline update live.
+4. At the approval gate, click **Approve and resume**.
+5. Confirm the same run continues through protected persistence and notification.
+6. Sign in as **Viewer B · Orbit Labs** to verify that cross-organization data and execution controls are unavailable.
 
-## What the final demo proves
-
-1. Two organizations exist with independent `owner`, `editor`, and `viewer` memberships.
-2. Org A can build a workflow containing `llm_call`, `http_request`, `conditional_branch`, `approval_gate`, `db_write`, and `notify` nodes.
-3. A workflow can start manually and through webhook, scheduled, or database-event paths.
-4. An approval gate pauses the same run and only an authorized member of that organization can resume it.
-5. `step_runs` stream live over a GraphQL subscription with no polling/page refresh.
-6. An Org B user cannot read, trigger, or approve Org A resources even when the Org A UUID is already known.
-
-The live verification also covers quota settlement, the `org_monthly_usage` Postgres view, retry accounting through `attempt_count`, a negative webhook path that skips the HTTP step, and server-side rejection of cross-organization known-ID attacks.
-
-## Architecture
+The strongest reviewer workflow is:
 
 ```text
-Next.js browser
-   │ Nhost Auth JWT
-   ▼
-Hasura GraphQL ───────── subscriptions ───────► live step-run UI
-   │
-   ├─ row permissions: X-Hasura-User-Id → org_members → org_id
-   ├─ Action saveWorkflow ───────► restricted-node role checks
-   ├─ Action triggerWorkflowRun ─► quota reservation + run snapshot
-   ├─ Action approveStep ────────► approver role check + resume
-   └─ Action webhookTrigger ─────► hashed-secret verification
-                                      │
-workflow_runs INSERT ─ Event Trigger ─┴─► execution worker
-                                            │
-                         Gemini / HTTP / branch / approval / DB / notify
-                                            │
-                         step_runs updates ◄─┘
-                                            │
-notifications INSERT ─ Event Trigger ───────► delivery handler
+Gemini LLM
+   ↓
+Conditional branch
+   ├─ POSITIVE → real HTTP request ─┐
+   └─ NEGATIVE ────────────────────┤
+                                   ↓
+                           Human approval
+                                   ↓
+                           Database write
+                                   ↓
+                            Notification
 ```
 
-### Why the Run Action returns immediately
+Manual and webhook triggers are enabled. A negative input skips the HTTP node, which makes the conditional branch visibly change execution rather than acting as a decorative step.
 
-`triggerWorkflowRun` authenticates the caller, reserves one quota slot atomically, creates the run plus a snapshot of all `step_runs`, and returns the run ID. A Hasura Event Trigger then executes the run asynchronously. The browser can therefore attach its subscription immediately and visibly stream `pending → running → waiting_approval → approved/completed`.
+## What AgentFlow demonstrates
+
+| Capability | What to look for |
+|---|---|
+| **Multi-tenant isolation** | Northstar AI and Orbit Labs have independent memberships and data visibility. |
+| **Role-aware workflow building** | Owners can use protected DB/notify/webhook capabilities; editors have narrower write access; viewers are read-only. |
+| **Real AI execution** | Gemini classifies runtime input inside an `llm_call` node. |
+| **True conditional routing** | The branch changes the next executed step based on Gemini output. |
+| **Human-in-the-loop control** | `approval_gate` pauses the run and resumes the exact same run after authorization. |
+| **Live observability** | `step_runs` stream into the UI through GraphQL subscriptions without polling or page refresh. |
+| **Non-manual execution** | Webhook, scheduled, and database-event trigger paths are wired through Hasura/Nhost. |
+| **Quota accounting** | Run quota is reserved atomically and settled when execution finishes. |
+
+## The architecture in 60 seconds
+
+```text
+Browser / Next.js
+      │
+      │ Nhost Auth JWT
+      ▼
+Hasura GraphQL
+      │
+      ├── row-level org permissions
+      ├── saveWorkflow Action ─────── protected-node authorization
+      ├── triggerWorkflowRun Action ─ quota reservation + immutable run snapshot
+      ├── approveStep Action ──────── approver authorization + resume
+      └── webhookTrigger Action ───── hashed-secret verification
+      │
+      ▼
+PostgreSQL workflow_runs INSERT
+      │
+      ▼
+Hasura Event Trigger
+      │
+      ▼
+Nhost execution worker
+      │
+      ├── Gemini
+      ├── conditional branch
+      ├── HTTP
+      ├── approval pause/resume
+      ├── DB persistence
+      └── notification outbox
+      │
+      ▼
+step_runs updates ── GraphQL subscription ──► live browser timeline
+```
+
+The important design choice is that **`triggerWorkflowRun` does not execute the whole workflow synchronously**. It authenticates the caller, reserves quota, snapshots the workflow into execution records, returns the run ID immediately, and lets an Event Trigger start the worker. That allows long-running or paused workflows to remain observable and resumable without holding an HTTP request open.
 
 ## Security model
 
-### Layer 1 — organization isolation in Hasura
+AgentFlow uses two separate authorization layers rather than trusting UI visibility.
 
-The Nhost JWT uses the normal Hasura transport role `user`. Application roles are stored in `org_members`, because one person can be an owner in one organization and a viewer in another. Every user-facing table permission resolves the caller through `X-Hasura-User-Id` and the row's organization relationship.
+**Hasura row permissions** provide organization isolation. Every browser-facing query is scoped through `org_members` and the Nhost JWT user ID. A user in Orbit Labs cannot read Northstar AI rows simply by knowing their UUIDs.
 
-Execution tables (`workflow_runs`, `step_runs`) are read-only to ordinary browser users. Server Functions perform state changes through the admin API after their own authorization checks. The SQL schema also carries `org_id` through workflow/execution records and uses composite foreign keys, preventing mixed-organization relationships.
+**Action/function authorization** protects business operations. `saveWorkflow`, `triggerWorkflowRun`, `approveStep`, and webhook execution independently verify membership and role before using elevated backend access.
 
-### Layer 2 — runtime/business authorization in Actions
+Additional hardening includes:
 
-`saveWorkflow` independently checks membership. Only owners can add/change/remove `db_write`, `notify`, or webhook-trigger definitions. Editors can edit normal nodes while preserving owner-only definitions. `approveStep` resolves the step's organization and checks the approver's membership in code before resuming the run. A guessed UUID is therefore insufficient.
+- hashed webhook secrets;
+- SSRF protection and timeouts for HTTP nodes;
+- immutable step snapshots for in-flight runs;
+- one retry for LLM and HTTP failures with `attempt_count` recorded;
+- atomic quota reservation/settlement;
+- read-only execution tables for ordinary browser users;
+- CSP, HSTS, clickjacking protection, MIME-sniffing protection, restrictive referrer policy, and browser permissions policy on the deployed frontend;
+- Gemini, Hasura admin/JWT, webhook, and Grafana secrets kept server-side in Nhost.
 
-Additional hardening includes hashed webhook secrets, SSRF protection for generic HTTP nodes, timeouts, one retry for LLM/HTTP calls, immutable step snapshots, atomic quota settlement, and notification delivery through an Event Trigger outbox.
+A dedicated [`security:smoke`](scripts/security-smoke.mjs) test verifies known-ID cross-org attacks against workflow reads, run triggering, and approval.
 
-## Hosted deployment
+## Reviewer proof checklist
 
-The production backend runs on **Nhost `eu-central-1` (Frankfurt)** and the frontend runs on Vercel. An earlier APAC test project was abandoned during setup after a DNS-resolution problem; production was migrated to Frankfurt and all final acceptance tests were run against that backend.
+The project is designed around the assignment's highest-weighted final scenario:
 
-Client-side Vercel environment variables contain only the Nhost subdomain, region, and public GraphQL URL. Gemini, Hasura admin/JWT, webhook, and Grafana secrets remain server-side in Nhost.
+- [x] Two organizations with owner/editor/viewer membership boundaries
+- [x] Workflow builder with `llm_call`, `http_request`, `conditional_branch`, `approval_gate`, `db_write`, and `notify`
+- [x] Manual execution plus working non-manual trigger paths
+- [x] Retry-aware asynchronous execution engine
+- [x] Approval pause → authorized resume of the same run
+- [x] Live GraphQL subscription updates
+- [x] Org-level quota/usage aggregation through PostgreSQL/Hasura
+- [x] Cross-org direct-ID read/trigger/approval attempts rejected server-side
 
-## Repository structure
+For the implementation rationale, see **[`WRITEUP.md`](WRITEUP.md)**. For the short recording flow, see **[`docs/DEMO.md`](docs/DEMO.md)**. For the architecture breakdown, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+
+## Repository map
 
 ```text
-.
-├── src/                       # Next.js app + workflow builder + live run viewer
-├── functions/                 # Nhost Functions
-│   ├── _lib/                  # runner, auth, quota, templates, security
-│   └── events/                # run, database, notification, scheduler handlers
-├── nhost/
-│   ├── nhost.toml
-│   ├── migrations/default/    # PostgreSQL schema
-│   └── metadata/              # Hasura relationships/permissions/Actions/triggers
-├── scripts/
-│   ├── seed-demo.mjs
-│   └── security-smoke.mjs
-├── docs/
-│   ├── assets/                # product screenshots
-│   ├── ASSIGNMENT.md
-│   ├── ARCHITECTURE.md
-│   ├── DEMO.md
-│   ├── DEPLOYMENT.md
-│   └── IMPLEMENTATION_STATUS.md
-└── WRITEUP.md
+src/                         Next.js reviewer UI, workflow builder, live run viewer
+functions/                   Nhost Actions/event handlers and execution engine
+functions/_lib/              authorization, runner, quota, templating, HTTP security
+nhost/migrations/default/    PostgreSQL schema and database logic
+nhost/metadata/              Hasura permissions, relationships, Actions, triggers
+scripts/security-smoke.mjs   cross-organization attack verification
+docs/                        architecture, demo and deployment documentation
+WRITEUP.md                   concise design/security rationale
 ```
 
-## Prerequisites
+## Technology choices
+
+- **Next.js + React** for the browser application
+- **Nhost Auth** for user sessions and Hasura-compatible JWT claims
+- **Hasura GraphQL** for queries, mutations, Actions, subscriptions, row permissions, Event Triggers and Cron Triggers
+- **PostgreSQL 14** for durable workflow state, quota accounting and aggregation
+- **Nhost Functions** for trusted workflow execution and runtime authorization
+- **Gemini 3.5 Flash-Lite** for the AI node used in the live reviewer workflow
+- **Vercel** for the public frontend deployment
+
+Production uses the **Nhost Frankfurt (`eu-central-1`)** backend.
+
+<details>
+<summary><strong>Run locally</strong></summary>
+
+### Requirements
 
 - Node.js 22+
-- Docker + Nhost CLI for the local Nhost stack
-- Gemini API key (Google AI Studio)
-- Nhost account for the hosted backend
+- Docker
+- Nhost CLI
+- Gemini API key
 
-For Windows local Nhost development, use WSL2.
-
-## Local setup
-
-### 1. Install dependencies
+### Install
 
 ```bash
-npm install
-npm install --prefix functions
+npm ci
+npm ci --prefix functions
 ```
 
-The root `package-lock.json` pins the frontend dependency graph for reproducible installs.
-
-### 2. Configure backend secrets
-
-Copy `.secrets.example` to `.secrets` and replace every placeholder:
-
-```toml
-HASURA_GRAPHQL_ADMIN_SECRET = 'strong-random-value'
-HASURA_GRAPHQL_JWT_SECRET = 'another-strong-random-value'
-NHOST_WEBHOOK_SECRET = 'another-strong-random-value'
-GEMINI_API_KEY = 'your-google-ai-studio-key'
-```
-
-`.secrets` is gitignored. `GEMINI_API_KEY` is backend-only and is never a `NEXT_PUBLIC_*` variable.
-
-### 3. Start Nhost
+Copy `.secrets.example` to `.secrets` and provide backend-only secrets, then start Nhost:
 
 ```bash
 nhost up
 ```
 
-The Nhost project applies the SQL migration and Hasura metadata in this repository and serves the Functions in `functions/`.
-
-### 4. Configure the Next.js app
-
-Copy `.env.example` to `.env.local`. For the default local stack the included fallback URLs are sufficient; for a cloud project fill in the project values.
-
-Start the frontend:
+Copy `.env.example` to `.env.local` if you need non-default frontend endpoints, then run:
 
 ```bash
 npm run dev
@@ -153,94 +182,12 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Demo data
+The committed `package-lock.json` files keep frontend and Function installs reproducible.
 
-Create four Nhost Auth accounts first:
+</details>
 
-- `owner-a@example.com`
-- `editor-a@example.com`
-- `owner-b@example.com`
-- `viewer-b@example.com`
-
-You can override those names through the `DEMO_*_EMAIL` environment variables.
-
-Then, from a trusted terminal only:
-
-```bash
-export NHOST_GRAPHQL_URL='https://YOUR_PROJECT.graphql.YOUR_REGION.nhost.run/v1'
-export NHOST_ADMIN_SECRET='YOUR_ADMIN_SECRET'
-npm run seed:demo
-```
-
-The script creates:
-
-- **Northstar AI (Org A):** owner + editor
-- **Orbit Labs (Org B):** owner + viewer
-
-It prints the two organization UUIDs for the walkthrough.
-
-## Build the required workflow
-
-Sign in as the Org A owner, create a workflow, and click **Load reviewer demo**. It creates:
-
-1. Gemini `llm_call` using `gemini-3.5-flash-lite` and returning `POSITIVE` or `NEGATIVE` text.
-2. `conditional_branch` routing positive output to the HTTP step and negative output directly to the approval gate.
-3. Real `http_request` to `https://httpbin.org/post` on the positive path.
-4. `approval_gate` that pauses either branch before persistence.
-5. Owner-only `db_write` into `workflow_results` after approval.
-
-Enable Manual and Webhook triggers and save. The browser hides restricted execution controls from viewers and marks owner-only builder capabilities, while the server Action remains the actual enforcement boundary.
-
-## Manual run + live subscription
-
-Click **Run**. The Action returns a run ID immediately; the right-side panel subscribes to `step_runs(workflow_run_id = runId)`. When the approval gate is reached, the UI displays **Paused · awaiting approval**. Clicking **Approve & resume** invokes the protected `approveStep` Action and continues the same run. The workspace then refreshes the aggregate quota/run status while the step panel continues to update through the subscription.
-
-## Webhook run
-
-The inbound webhook is itself a public Hasura Action; no frontend/admin token is required, but the configured workflow secret is required:
-
-```bash
-curl "$NHOST_GRAPHQL_URL" \
-  -H 'content-type: application/json' \
-  --data '{
-    "query":"mutation($id:uuid!,$secret:String!,$payload:json){ webhookTrigger(workflow_id:$id,secret:$secret,payload:$payload){ run_id status } }",
-    "variables":{"id":"WORKFLOW_UUID","secret":"YOUR_WEBHOOK_SECRET","payload":{"text":"The launch was a disaster and customers are disappointed."}}
-  }'
-```
-
-The negative payload is useful in the demo because Gemini returns `NEGATIVE`, the branch targets the approval gate, and the HTTP node is visibly marked `skipped`. Secrets are hashed before storage and are not exposed in the workflow-trigger select permission.
-
-## Scheduled and database-event starts
-
-A Hasura Cron Trigger runs the scheduled dispatcher every minute. A workflow trigger such as `*/5 * * * *` is evaluated in UTC and enqueued when due.
-
-For database events, configure a workflow `db_event` trigger with an event name such as `demo.created`. An owner/editor can insert a `trigger_events` row; Hasura's Event Trigger calls the database dispatcher, which starts matching workflows. The UI includes **Emit DB event** for the demo.
-
-## Notify node
-
-A `notify` step does not send a message inline. The runner inserts into `notifications`; the `notification_created` Hasura Event Trigger calls the notification handler. `demo` channel proves the event-driven flow without external credentials; Slack/email destinations can be configured server-side.
-
-## Cross-org attack smoke test
-
-Sign in as an Org B user, obtain its access token, and supply a known Org A workflow ID (plus an Org A approval step ID if available):
-
-```bash
-export NHOST_GRAPHQL_URL='https://.../v1'
-export ORG_B_ACCESS_TOKEN='...'
-export ORG_A_WORKFLOW_ID='...'
-export ORG_A_STEP_RUN_ID='...'   # optional but recommended
-npm run security:smoke
-```
-
-The script asserts that:
-
-- direct Org A workflow read returns `null`;
-- `triggerWorkflowRun` is rejected;
-- `approveStep` is rejected.
-
-The browser UI is only convenience: the server rejection remains the authoritative proof.
-
-## Validation
+<details>
+<summary><strong>Validation</strong></summary>
 
 ```bash
 npm run typecheck
@@ -248,12 +195,12 @@ npm run typecheck:functions
 npm run build
 ```
 
-GitHub Actions also validates Nhost config, Hasura Action SDL, the PostgreSQL migration on PostgreSQL 14, both TypeScript projects, and the Next.js production build on every push/PR.
+GitHub Actions additionally validates the Nhost configuration, Hasura Action SDL, PostgreSQL migration apply/rollback on PostgreSQL 14, both TypeScript projects, and the Next.js production build.
 
-## Deployment / submission
+</details>
 
-Use [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the Nhost + Vercel checklist and [`docs/DEMO.md`](docs/DEMO.md) for the final recording. The final submission consists of:
+---
 
-1. this GitHub repository;
-2. the hosted Vercel URL;
-3. the short final-task recording.
+**Live application:** https://ai-agent-workflow-builder-seven.vercel.app  
+**Architecture rationale:** [`WRITEUP.md`](WRITEUP.md)  
+**Demo walkthrough:** [`docs/DEMO.md`](docs/DEMO.md)
