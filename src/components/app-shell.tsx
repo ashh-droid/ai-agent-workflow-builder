@@ -1,6 +1,6 @@
 "use client";
 
-import { DatabaseZap, LogOut, Play, Plus, Radio, Shield, Trash2, Workflow as WorkflowIcon } from "lucide-react";
+import { LogOut, Plus, Radio, Shield, Workflow as WorkflowIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "urql";
@@ -16,14 +16,56 @@ function statusLabel(status?: string) {
   return status.replaceAll("_", " ");
 }
 
+function ExecutionPreview({ workflow }: { workflow: Workflow | null }) {
+  return (
+    <aside className="execution-panel execution-preview">
+      <div className="execution-heading">
+        <div><span>Live execution</span><small>{workflow ? "Ready for a run" : "No workflow selected"}</small></div>
+        {workflow && <span className="status-badge ready">ready</span>}
+      </div>
+
+      {workflow ? (
+        <>
+          <div className="execution-meta">subscription idle · waiting for run</div>
+          <div className="execution-timeline skeleton-timeline">
+            {workflow.steps.map((step) => (
+              <div className={`execution-step pending-dim step-${step.step_type}`} key={step.id ?? `${step.step_type}-${step.step_order}`}>
+                <div className="execution-step-icon pending">·</div>
+                <div className="execution-step-copy">
+                  <span className="step-label">{step.name}</span>
+                  <span className="step-detail">{step.step_type.replaceAll("_", " ")}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="execution-help">Run the workflow to stream step state changes here through the live GraphQL subscription.</p>
+          <div className="execution-footer">
+            <span className="section-label">Active triggers</span>
+            <div className="trigger-pill-row">
+              {workflow.triggers.filter((trigger) => trigger.is_active).map((trigger) => (
+                <span className="trigger-pill" key={trigger.id ?? trigger.trigger_type}>{trigger.trigger_type.replaceAll("_", " ")}</span>
+              ))}
+              {!workflow.triggers.some((trigger) => trigger.is_active) && <span className="empty-trigger">none configured</span>}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="execution-empty">
+          <Radio size={22} />
+          <strong>Select a workflow</strong>
+          <span>Its execution path will appear here before you run it.</span>
+        </div>
+      )}
+    </aside>
+  );
+}
+
 export function AppShell() {
   const { nhost, session, isLoading } = useAuth();
   const router = useRouter();
   const userId = session?.user?.id;
 
-  const [{ data: orgData, fetching: orgLoading, error: orgError }] = useQuery<{
-    org_members: Membership[];
-  }>({
+  const [{ data: orgData, fetching: orgLoading, error: orgError }] = useQuery<{ org_members: Membership[] }>({
     query: MY_ORGS,
     variables: { userId },
     pause: !userId,
@@ -115,11 +157,9 @@ export function AppShell() {
       eventName: "demo.created",
       payload: { source: "ui", at: new Date().toISOString() },
     });
-    setNotice(
-      result.error
-        ? result.error.message
-        : "Database event inserted — matching db_event workflows will start via Hasura Event Trigger.",
-    );
+    setNotice(result.error
+      ? result.error.message
+      : "Database event inserted — matching db_event workflows will start via Hasura Event Trigger.");
   }
 
   async function signOut() {
@@ -128,12 +168,7 @@ export function AppShell() {
   }
 
   if (isLoading || orgLoading || !session) {
-    return (
-      <main className="loading-page">
-        <div className="pulse-logo">AG</div>
-        <p>Loading secure workspace…</p>
-      </main>
-    );
+    return <main className="loading-page"><div className="wordmark">agent<span>flow</span></div><p>Loading secure workspace…</p></main>;
   }
 
   if (orgError) {
@@ -142,10 +177,7 @@ export function AppShell() {
         <Shield size={28} />
         <h1>Could not load organization membership</h1>
         <p>{orgError.message}</p>
-        <div className="row gap-sm">
-          <button onClick={() => window.location.reload()} className="primary">Retry</button>
-          <button onClick={signOut} className="secondary">Sign out</button>
-        </div>
+        <div className="row gap-sm"><button onClick={() => window.location.reload()} className="primary">Retry</button><button onClick={signOut} className="secondary">Sign out</button></div>
       </main>
     );
   }
@@ -155,177 +187,98 @@ export function AppShell() {
       <main className="empty-page">
         <Shield size={28} />
         <h1>No organization membership yet</h1>
-        <p>
-          Create the demo organizations with <code>npm run seed:demo</code> after creating the demo Auth users,
-          or follow README → Demo setup.
-        </p>
+        <p>Create the demo organizations with <code>npm run seed:demo</code> after creating the demo Auth users, or follow README → Demo setup.</p>
         <button onClick={signOut} className="secondary">Sign out</button>
       </main>
     );
   }
 
   const signedInEmail = session.user?.email ?? "signed-in user";
+  const quotaUsed = usage?.quota_used ?? membership?.organization.quota_used ?? 0;
+  const quotaLimit = usage?.quota_limit ?? membership?.organization.quota_limit ?? 100;
 
   return (
-    <main className="workspace">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="brand-mark small">AG</div>
-          <div><strong>AgentFlow</strong><span>secure orchestration</span></div>
-        </div>
-
-        <label className="org-select">
-          Organization
-          <select
-            value={orgId ?? ""}
-            onChange={(e) => {
-              setOrgId(e.target.value);
-              setRunId(null);
-              setWorkflowId(null);
-            }}
-          >
-            {memberships.map((item) => (
-              <option value={item.organization.id} key={item.organization.id}>
-                {item.organization.name} · {item.role}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="quota-card">
-          <div className="quota-head">
-            <span>Monthly quota</span>
-            <strong>
-              {usage?.quota_used ?? membership?.organization.quota_used ?? 0} / {usage?.quota_limit ?? membership?.organization.quota_limit ?? 0}
-            </strong>
-          </div>
-          <div className="progress">
-            <span
-              style={{
-                width: `${Math.min(100, ((usage?.quota_used ?? 0) / Math.max(1, usage?.quota_limit ?? 1)) * 100)}%`,
-              }}
-            />
-          </div>
-          <small>{usage?.quota_reserved ?? 0} reserved · {usage?.quota_remaining ?? 0} available</small>
-          <div className="quota-stats">
-            <span><strong>{usage?.total_runs_this_month ?? 0}</strong> runs</span>
-            <span><strong>{usage?.successful_runs ?? 0}</strong> completed</span>
-          </div>
-        </div>
-
-        <div className="sidebar-title">
-          <span>Workflows</span>
-          {role !== "viewer" && (
-            <button
-              className="icon-btn"
-              aria-label="Create workflow"
-              onClick={() => {
-                setWorkflowId("new");
+    <main className="app-layout with-topbar">
+      <header className="app-topbar">
+        <div className="topbar-left">
+          <div className="topbar-icon">a</div>
+          <div className="wordmark wordmark-small">agent<span>flow</span></div>
+          <div className="topbar-divider" />
+          <label className="topbar-org-control" aria-label="Organization">
+            <select
+              value={orgId ?? ""}
+              onChange={(event) => {
+                setOrgId(event.target.value);
                 setRunId(null);
+                setWorkflowId(null);
               }}
             >
-              <Plus size={15} />
+              {memberships.map((item) => <option value={item.organization.id} key={item.organization.id}>{item.organization.name}</option>)}
+            </select>
+          </label>
+          <span className="topbar-role-badge">{role}</span>
+        </div>
+
+        <div className="topbar-right">
+          <div className="topbar-quota" title={`${usage?.quota_remaining ?? 0} available · ${usage?.quota_reserved ?? 0} reserved`}>
+            <span>{quotaUsed} / {quotaLimit}</span>
+            <div className="quota-bar-track"><div className="quota-bar-fill" style={{ width: `${Math.min(100, (quotaUsed / Math.max(1, quotaLimit)) * 100)}%` }} /></div>
+          </div>
+          <button className="user-avatar" onClick={signOut} title={`Sign out ${signedInEmail}`} aria-label={`Sign out ${signedInEmail}`}>
+            {signedInEmail.slice(0, 1).toUpperCase()}<LogOut size={11} />
+          </button>
+        </div>
+      </header>
+
+      <aside className="app-sidebar">
+        <div className="sidebar-utility">
+          {role !== "viewer" && (
+            <button className="new-workflow-button" onClick={() => { setWorkflowId("new"); setRunId(null); }}>
+              <Plus size={13} />New workflow
             </button>
           )}
         </div>
-
-        <nav className="workflow-nav">
-          {workflows.map((wf) => {
-            const latestStatus = wf.runs?.[0]?.status;
+        <nav className="workflow-list">
+          {workflows.map((workflow) => {
+            const latestStatus = workflow.runs?.[0]?.status;
             return (
               <button
-                key={wf.id}
-                className={workflowId === wf.id ? "active" : ""}
-                onClick={() => {
-                  setWorkflowId(wf.id!);
-                  setRunId(null);
-                }}
+                key={workflow.id}
+                className={`workflow-list-item ${workflowId === workflow.id ? "active" : ""}`}
+                onClick={() => { setWorkflowId(workflow.id!); setRunId(null); }}
               >
-                <WorkflowIcon size={15} />
+                <WorkflowIcon size={14} />
                 <span>
-                  <strong>{wf.name}</strong>
-                  <small className={`workflow-status workflow-status-${latestStatus ?? "never"}`}>
-                    {statusLabel(latestStatus)}
-                  </small>
+                  <strong>{workflow.name}</strong>
+                  <small>{workflow.steps.length} steps · {statusLabel(latestStatus)}</small>
                 </span>
               </button>
             );
           })}
         </nav>
-
-        <div className="sidebar-footer">
-          <span>{signedInEmail}</span>
-          <button onClick={signOut} className="icon-btn" aria-label="Sign out"><LogOut size={15} /></button>
-        </div>
+        <div className="sidebar-account"><span>{signedInEmail}</span></div>
       </aside>
 
-      <section className="main-content">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">{membership?.organization.name}</p>
-            <h1>{selected?.name ?? (workflowId === "new" ? "Create workflow" : "Workflow workspace")}</h1>
-            {selected?.description && <p className="topbar-description">{selected.description}</p>}
-          </div>
-          <div className="row gap-sm topbar-actions">
-            <span className={`role-badge role-${role}`}><Shield size={13} />{role}</span>
-            {selected && role === "owner" && (
-              <button className="secondary danger-button" onClick={() => void deleteWorkflow()}><Trash2 size={15} />Delete</button>
-            )}
-            {selected && role !== "viewer" && (
-              <button className="secondary" onClick={databaseEvent}><DatabaseZap size={15} />Emit DB event</button>
-            )}
-            {selected && role !== "viewer" && (
-              <button className="primary" onClick={run} disabled={starting}><Play size={15} />{starting ? "Queueing…" : "Run"}</button>
-            )}
-          </div>
-        </header>
-
+      <section className="workflow-canvas">
         {notice && <div className="info-banner"><Radio size={15} />{notice}</div>}
-
-        <div className="content-grid">
-          {orgId && <WorkflowBuilder orgId={orgId} role={role} workflow={selected} onSave={save} />}
-          {runId ? (
-            <RunViewer
-              runId={runId}
-              role={role}
-              onRunSettled={() => refresh({ requestPolicy: "network-only" })}
-            />
-          ) : (
-            <section className="run-panel preview-run">
-              <div className="section-heading preview-heading">
-                <div>
-                  <p className="eyebrow">EXECUTION PREVIEW</p>
-                  <h2>{selected ? "Ready to stream" : "Live run stream"}</h2>
-                </div>
-                {selected && <span className="run-state idle">Ready</span>}
-              </div>
-              {selected ? (
-                <>
-                  <p className="preview-copy">Run this workflow to stream step state changes here through a GraphQL subscription — no polling or page refresh.</p>
-                  <div className="preview-pipeline">
-                    {selected.steps.map((step) => (
-                      <div className={`preview-step step-${step.step_type}`} key={step.id ?? `${step.step_type}-${step.step_order}`}>
-                        <span className="preview-dot" />
-                        <div>
-                          <strong>{step.name}</strong>
-                          <small>{step.step_type.replaceAll("_", " ")}</small>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="empty-run-inner">
-                  <Radio size={24} />
-                  <p>Select a workflow or create one to preview its execution pipeline.</p>
-                </div>
-              )}
-            </section>
-          )}
-        </div>
-
+        {orgId && (
+          <WorkflowBuilder
+            orgId={orgId}
+            role={role}
+            workflow={selected}
+            onSave={save}
+            onRun={run}
+            onDelete={deleteWorkflow}
+            onEmitEvent={databaseEvent}
+            starting={starting}
+          />
+        )}
         {fetching && <div className="sync-pill">Syncing GraphQL…</div>}
       </section>
+
+      {runId
+        ? <RunViewer runId={runId} role={role} workflow={selected} onRunSettled={() => refresh({ requestPolicy: "network-only" })} />
+        : <ExecutionPreview workflow={selected} />}
     </main>
   );
 }
