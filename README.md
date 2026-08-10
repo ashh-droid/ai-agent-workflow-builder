@@ -13,6 +13,14 @@
 
 > **Reviewer link:** use the stable production URL **https://ai-agent-workflow-builder-seven.vercel.app**. Vercel-generated preview URLs such as `*-git-main-*` are not the submission URL and may be protected independently.
 
+## Engineering highlights
+
+- **Durable asynchronous workflow engine** with immutable run snapshots, conditional jumps, retry-aware external calls, and pause/resume of the same execution.
+- **Two-layer multi-tenant authorization**: Hasura row-level organization isolation plus Nhost Function checks for protected workflow operations and approval decisions.
+- **Four trigger modes**: manual, authenticated webhook secret, cron scheduling, and database-event dispatch through Hasura Event Triggers.
+- **Production-oriented integration safety** including hashed webhook secrets, SSRF/redirect protection, request timeouts, read-only execution tables, and server-only LLM credentials.
+- **Observable and testable execution** through GraphQL subscriptions, atomic quota reservation/settlement, monthly usage aggregation, security smoke tests, migration validation, type checks, and production builds in CI.
+
 ## Reviewer walkthrough
 
 Open the **[live app](https://ai-agent-workflow-builder-seven.vercel.app)**. The login screen includes four isolated reviewer accounts, so no setup is required.
@@ -173,7 +181,9 @@ npm ci
 npm ci --prefix functions
 ```
 
-Copy `.secrets.example` to `.secrets` and provide backend-only secrets, then start Nhost:
+Copy `.secrets.example` to `.secrets` and replace every placeholder. The file includes the Hasura admin/JWT secrets, the internal Nhost webhook secret, Gemini API key, and local Grafana password required by `nhost/nhost.toml`.
+
+Start the local Nhost stack:
 
 ```bash
 nhost up
@@ -186,6 +196,27 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+### Optional local reviewer data
+
+Create four Nhost Auth users before seeding organization memberships:
+
+```text
+owner-a@example.com
+editor-a@example.com
+owner-b@example.com
+viewer-b@example.com
+```
+
+Then provide the local GraphQL endpoint and admin secret to the seed script and run:
+
+```bash
+export NHOST_GRAPHQL_URL="https://local.graphql.local.nhost.run/v1"
+export NHOST_ADMIN_SECRET="<the HASURA_GRAPHQL_ADMIN_SECRET value from .secrets>"
+npm run seed:demo
+```
+
+The seed creates **Northstar AI** with owner/editor memberships and **Orbit Labs** with owner/viewer memberships. Sign in with the passwords you chose when creating those Auth users.
 
 The committed `package-lock.json` files keep frontend and Function installs reproducible.
 
@@ -200,7 +231,19 @@ npm run typecheck:functions
 npm run build
 ```
 
+Or run the combined local check:
+
+```bash
+npm run check
+```
+
 GitHub Actions additionally validates the Nhost configuration, Hasura Action SDL, PostgreSQL migration apply/rollback on PostgreSQL 14, both TypeScript projects, and the Next.js production build.
+
+For an authenticated deployment-level isolation check, configure the environment variables documented by `scripts/security-smoke.mjs` and run:
+
+```bash
+npm run security:smoke
+```
 
 </details>
 
