@@ -1,0 +1,228 @@
+/* Responsive behavior for AgentFlow evaluator UI. Loaded last. */
+
+@media (max-width: 1180px) {
+  .app-layout {
+    grid-template-columns: 205px minmax(0, 1fr) 300px;
+  }
+
+  .workflow-canvas { padding: 24px 22px 36px; }
+  .workflow-editor-header { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .workflow-toolbar-actions { width: 100%; justify-content: flex-start; }
+  .workflow-name-input { width: 100%; }
+  .grid-four { grid-template-columns: 1fr 1fr; }
+
+  .login-story { padding-inline: 42px; }
+  .login-form-side { padding-inline: 42px; }
+  .login-hero-copy h2 { font-size: 32px; }
+  .login-pipeline-step { grid-template-columns: 26px minmax(48px, 1fr) 64px minmax(170px, .9fr); }
+}
+
+@media (max-width: 1020px) {
+  .app-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-rows: 60px minmax(0, 1fr) auto;
+  }
+
+  .app-topbar { grid-column: 1 / -1; grid-row: 1; padding-inline: 16px; }
+  .app-sidebar { grid-column: 1; grid-row: 2 / 4; }
+  .workflow-canvas { grid-column: 2; grid-row: 2; min-height: 640px; }
+  .execution-panel {
+    grid-column: 2;
+    grid-row: 3;
+    max-height: 520px;
+    border-top: .5px solid var(--border);
+    border-left: 0;
+    background: #0b0c12;
+  }
+
+  .execution-timeline { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+  .execution-step { min-width: 0; }
+  .execution-step.paused-highlight { margin-inline: 0; }
+  .execution-footer, .latest-output { max-width: 680px; }
+
+  .topbar-quota small { display: none; }
+  .quota-bar-track { width: 56px; }
+
+  .login-shell { grid-template-columns: minmax(0, 1fr) 470px; }
+  .login-story { padding: 46px 36px 34px; }
+  .login-story-main { width: 100%; }
+  .login-hero-copy h2 { font-size: 29px; }
+  .login-hero-copy p { font-size: 13px; }
+  .login-pipeline-step { grid-template-columns: 25px 1fr 58px minmax(135px, .85fr); gap: 10px; }
+  .login-pipeline-step > span { font-size: 11px; }
+}
+
+@media (max-width: 920px) {
+  .login-shell { display: block; min-height: 100vh; }
+  .login-story {
+    display: block;
+    min-height: auto;
+    padding: 34px 30px 28px;
+    border-bottom: .5px solid var(--border);
+  }
+  .login-story-content { min-height: 0; gap: 24px; }
+  .login-story-main { margin: 0; }
+  .login-hero-copy { margin: 0; }
+  .login-hero-copy h2 { max-width: 720px; margin-block: 9px 10px; font-size: 27px; }
+  .login-hero-copy p { max-width: 720px; }
+  .login-pipeline { display: none; }
+  .login-proof-row { margin-top: 0; }
+  .login-form-side { min-height: auto; padding: 36px 30px 54px; border-left: 0; }
+  .login-form-card { width: min(520px, 100%); }
+  .mobile-wordmark { display: none; }
+
+  .app-layout { grid-template-columns: 175px minmax(0, 1fr); }
+  .workflow-canvas { padding: 22px 18px 32px; }
+  .workflow-name-input { font-size: 20px; }
+  .step-card { padding: 14px; }
+  .step-card-actions { gap: 4px; }
+  .step-owner-badge, .step-state-hint { font-size: 8px; }
+  .execution-timeline { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .app-layout { display: flex; min-height: 100vh; flex-direction: column; }
+
+  .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    min-height: 58px;
+    flex: 0 0 auto;
+    padding: 10px 12px;
+  }
+  .topbar-left, .topbar-right { gap: 7px; }
+  .topbar-icon { width: 30px; height: 30px; }
+  .wordmark-small, .topbar-divider { display: none; }
+  .topbar-org-control select { min-width: 110px; max-width: 145px; }
+  .topbar-role-badge { font-size: 9px; }
+  .topbar-quota { padding: 4px 7px; }
+  .topbar-quota > div:first-child span, .topbar-quota small, .quota-bar-track { display: none; }
+  .user-avatar { min-width: 32px; height: 32px; }
+
+  .app-sidebar {
+    order: 1;
+    width: 100%;
+    min-height: auto;
+    padding: 10px 8px;
+    border-right: 0;
+    border-bottom: .5px solid var(--border);
+  }
+  .sidebar-intro, .sidebar-account { display: none; }
+  .sidebar-utility { padding: 0 4px 9px; }
+  .new-workflow-button { width: auto; min-height: 32px; }
+  .workflow-list {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 2px 3px;
+    scrollbar-width: thin;
+  }
+  .workflow-list-item {
+    flex: 0 0 210px;
+    min-height: 51px;
+    margin: 0;
+    grid-template-columns: 17px minmax(0, 1fr);
+  }
+  .workflow-list-status { display: none; }
+  .development-history { margin: 9px 4px 0; padding-top: 8px; }
+  .development-history-list { flex-direction: row; overflow-x: auto; }
+  .development-history-list .workflow-list-item { flex: 0 0 190px; }
+
+  .workflow-canvas { order: 2; width: 100%; min-height: auto; overflow: visible; padding: 22px 14px 32px; }
+  .pipeline-builder { width: 100%; }
+  .workflow-editor-header { margin-bottom: 20px; }
+  .workflow-title-edit > span { overflow-x: auto; white-space: nowrap; }
+  .workflow-toolbar-actions { gap: 6px; }
+  .toolbar-button, .run-workflow-button { flex: 1 1 auto; min-width: 92px; }
+  .toolbar-popover, .triggers-popover {
+    position: fixed;
+    top: 70px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100vh - 90px);
+    overflow: auto;
+  }
+
+  .pipeline-row { grid-template-columns: 24px minmax(0, 1fr); gap: 9px; }
+  .pipeline-node { width: 24px; height: 24px; box-shadow: 0 0 0 3px #10121a; }
+  .step-card { margin-bottom: 9px; padding: 13px; }
+  .step-card-header { align-items: flex-start; }
+  .step-card-title-group { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .step-name-input { width: 100%; font-size: 13px; }
+  .step-card-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .micro-icon-button { width: 25px; height: 25px; }
+  .approval-config, .db-config { align-items: stretch; flex-direction: column; }
+  .approval-config select, .db-config label { width: 100%; min-width: 0; }
+  .http-inline { grid-template-columns: 82px minmax(0, 1fr); }
+  .add-step-bar { margin-left: 33px; }
+
+  .execution-panel {
+    order: 3;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    padding: 22px 16px 34px;
+  }
+  .execution-empty { min-height: 220px; }
+
+  .grid-two, .grid-four, .compact-trigger-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .login-story { padding: 26px 20px 22px; }
+  .wordmark-large { font-size: 31px; }
+  .login-tagline { font-size: 13px; }
+  .login-kicker { font-size: 9px; }
+  .login-hero-copy h2 { font-size: 23px; }
+  .login-hero-copy p { font-size: 12px; line-height: 1.55; }
+  .login-proof-row { gap: 6px; }
+  .login-proof-row span { padding: 5px 7px; font-size: 9px; }
+  .login-form-side { padding: 28px 18px 42px; }
+  .login-heading h1 { font-size: 24px; }
+  .demo-credentials { padding: 11px; }
+  .demo-account { min-height: 52px; padding-inline: 7px; }
+  .demo-account > span { min-width: 88px; }
+  .demo-account strong { font-size: 10.5px; }
+  .demo-account code { font-size: 9px; }
+
+  .app-topbar { padding-inline: 9px; }
+  .topbar-org-control select { min-width: 92px; max-width: 116px; font-size: 10px; }
+  .topbar-role-badge { display: none; }
+  .topbar-quota { margin-left: auto; }
+
+  .workflow-canvas { padding-inline: 10px; }
+  .workflow-name-input { font-size: 18px; }
+  .workflow-toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .run-workflow-button { grid-column: 1 / -1; }
+  .step-card { padding: 11px; }
+  .step-type-badge { min-width: 40px; font-size: 9px; }
+  .step-state-hint, .step-owner-badge { display: none; }
+  .step-card-actions .micro-icon-button:nth-of-type(1),
+  .step-card-actions .micro-icon-button:nth-of-type(2) { display: none; }
+  .http-inline { grid-template-columns: 1fr; }
+  .branch-pills { flex-direction: column; align-items: flex-start; }
+  .add-step-bar { margin-left: 0; }
+  .add-step-btn { flex: 1 1 calc(33% - 6px); justify-content: center; }
+  .execution-preview-card { padding: 12px; }
+}
+
+@media (max-width: 380px) {
+  .topbar-icon { display: none; }
+  .topbar-org-control select { max-width: 105px; }
+  .user-avatar { padding-inline: 6px; }
+  .workflow-list-item { flex-basis: 180px; }
+  .toolbar-button { min-width: 0; padding-inline: 8px; }
+  .add-step-btn { flex-basis: calc(50% - 5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
