@@ -74,7 +74,7 @@ function reviewerDemo(orgId: string): Workflow {
     ],
     triggers: [
       { trigger_type: "manual", config: {}, is_active: true },
-      { trigger_type: "webhook", config: { secret: "agentflow-reviewer-webhook-2026" }, is_active: true },
+      { trigger_type: "webhook", config: { secret: crypto.randomUUID() }, is_active: true },
     ],
   };
 }
@@ -158,7 +158,7 @@ export function WorkflowBuilder({
         : type === "db_event"
           ? { event_name: "demo.created" }
           : type === "webhook"
-            ? { secret: "change-me-strong-secret" }
+            ? { secret: crypto.randomUUID() }
             : {};
       setDraft({ ...draft, triggers: [...draft.triggers, { trigger_type: type, config, is_active: true }] });
     } else if (!enabled && existing) {
