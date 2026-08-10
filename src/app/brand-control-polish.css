@@ -1,0 +1,154 @@
+/* Brand/control consistency: shared AgentFlow mark + dark native controls. */
+
+/* ----- Top bar brand lockup ----- */
+.topbar-left {
+  gap: 10px;
+}
+
+.topbar-left::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: block;
+  border-radius: 9px;
+  background: url("/favicon.svg") center / 100% 100% no-repeat;
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.12), 0 8px 22px rgba(49, 46, 129, 0.18);
+}
+
+.wordmark-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  min-height: 34px;
+  letter-spacing: -0.025em;
+}
+
+.wordmark-small::after {
+  content: "";
+  width: 1px;
+  height: 24px;
+  margin-left: 14px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,.13) 20%, rgba(255,255,255,.13) 80%, transparent);
+}
+
+/* ----- Every native select follows AgentFlow's visual system ----- */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  color-scheme: dark;
+  min-height: 38px;
+  padding: 8px 38px 8px 11px;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 8px;
+  background-color: #161920;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 14px 14px;
+  color: #e2e5ea;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+
+select:hover:not(:disabled) {
+  border-color: rgba(129,140,248,.28);
+  background-color: #191d27;
+}
+
+select:focus,
+select:focus-visible {
+  outline: none;
+  border-color: rgba(99,102,241,.72);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.13), 0 8px 24px rgba(0,0,0,.16);
+  background-color: #191d27;
+}
+
+select:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+  background-color: #11141a;
+  color: #70798a;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+select option,
+select optgroup {
+  color-scheme: dark;
+  background: #12151e;
+  color: #e2e5ea;
+  font-size: 12px;
+}
+
+select option:checked {
+  background: #292c55;
+  color: #f4f4ff;
+}
+
+/* Give compact inline selects enough room for their labels and chevron. */
+.step-card select,
+.toolbar-popover select {
+  min-width: 132px;
+}
+
+.http-config select {
+  min-width: 92px;
+}
+
+/* ----- Responsive brand lockup ----- */
+@media (max-width: 920px) {
+  .topbar-left::before {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+    border-radius: 8px;
+  }
+  .wordmark-small {
+    min-height: 31px;
+  }
+  .wordmark-small::after {
+    height: 21px;
+    margin-left: 10px;
+  }
+}
+
+@media (max-width: 680px) {
+  .topbar-left {
+    gap: 8px;
+  }
+  .topbar-left::before {
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+  }
+  .wordmark-small {
+    font-size: 16px;
+    min-height: 29px;
+  }
+  .wordmark-small::after {
+    display: none;
+  }
+  select {
+    min-height: 40px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-left::before {
+    width: 27px;
+    height: 27px;
+    flex-basis: 27px;
+    border-radius: 7px;
+  }
+  .wordmark-small {
+    font-size: 15px;
+  }
+}
