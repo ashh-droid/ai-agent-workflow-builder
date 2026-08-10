@@ -11,6 +11,8 @@
 ![Nhost](https://img.shields.io/badge/Nhost-Auth%20%2B%20Functions-4F46E5)
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-4285F4?logo=google)
 
+![AgentFlow workflow builder with completed live run](docs/assets/agentflow-completed-run.webp)
+
 > **Reviewer link:** use the stable production URL **https://ai-agent-workflow-builder-seven.vercel.app**. Vercel-generated preview URLs such as `*-git-main-*` are not the submission URL and may be protected independently.
 
 ## Try it in two minutes

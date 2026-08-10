@@ -8,10 +8,30 @@ import "./brand-control-polish.css";
 import "./login-balance.css";
 import { Providers } from "@/components/providers";
 
+const siteUrl = "https://ai-agent-workflow-builder-seven.vercel.app";
+const title = "AgentFlow — AI Agent Workflow Builder";
+const description = "Secure multi-tenant AI workflow orchestration with live execution, conditional routing, human approval, and role-aware controls.";
+
 export const metadata: Metadata = {
-  title: "AgentFlow — AI Agent Workflow Builder",
-  description: "Secure multi-tenant AI workflow orchestration on Nhost + Hasura",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
   applicationName: "AgentFlow",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "AgentFlow",
+    title,
+    description,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "AgentFlow workflow builder with live execution" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
